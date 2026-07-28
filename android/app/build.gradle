@@ -117,3 +117,11 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+
+project.ext.envConfigFiles = [
+    debug: ".env",
+    release: ".env",
+]
+
+apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"

@@ -1,0 +1,74 @@
+{
+  "app": {
+    "title": "بطاقات هيرثستون",
+    "subtitleLoaded": "تم تحميل {{loaded}} من {{total}} بطاقة",
+    "subtitleFiltered": "{{visible}} من {{loaded}} بطاقة محمّلة"
+  },
+  "search": {
+    "placeholder": "ابحث عن البطاقات بالاسم",
+    "label": "ابحث عن البطاقات بالاسم",
+    "clear": "مسح البحث"
+  },
+  "filters": {
+    "type": "النوع",
+    "class": "الفئة",
+    "rarity": "الندرة",
+    "all": "الكل",
+    "allOf": "كل {{label}}",
+    "clear": "مسح ({{count}})",
+    "clearLabel": "مسح جميع عوامل التصفية",
+    "dropdownLabel": "عامل تصفية {{label}}، المحدد {{selected}}",
+    "noOptions": "لا توجد خيارات محمّلة بعد. حمّل المزيد من البطاقات لعرضها."
+  },
+  "card": {
+    "unknownType": "غير معروف",
+    "neutralClass": "محايد",
+    "noRarity": "—",
+    "stats": "{{attack}} هجوم / {{health}} صحة"
+  },
+  "cardTypes": {
+    "minion": "تابع",
+    "spell": "تعويذة",
+    "weapon": "سلاح",
+    "hero": "بطل",
+    "location": "موقع"
+  },
+  "cardRarities": {
+    "free": "مجانية",
+    "common": "شائعة",
+    "rare": "نادرة",
+    "epic": "ملحمية",
+    "legendary": "أسطورية"
+  },
+  "cardClasses": {
+    "neutral": "محايد",
+    "demonhunter": "صياد الشياطين",
+    "druid": "الكاهن الطبيعي",
+    "hunter": "الصياد",
+    "mage": "الساحر",
+    "paladin": "الفارس المقدس",
+    "priest": "الكاهن",
+    "rogue": "اللص",
+    "shaman": "الشامان",
+    "warlock": "المشعوذ",
+    "warrior": "المحارب"
+  },
+  "list": {
+    "loading": "جارٍ تحميل البطاقات…",
+    "retry": "أعد المحاولة",
+    "empty": "لا توجد بطاقات مطابقة لعوامل التصفية.",
+    "emptyHint": "يتم البحث في البطاقات المحمّلة فقط. حمّل المزيد لتوسيع نطاق البحث.",
+    "loadMoreCards": "تحميل المزيد من البطاقات",
+    "loadMore": "تحميل المزيد",
+    "allLoaded": "تم تحميل جميع البطاقات البالغ عددها {{total}}.",
+    "progress": "تم تحميل {{loaded}} من {{total}}",
+    "progressFiltered": "تم تحميل {{loaded}} من {{total}} · امسح عوامل التصفية للتحميل التلقائي عند التمرير"
+  },
+  "errors": {
+    "rateLimit": "تم بلوغ الحد الأقصى للطلبات. يرجى المحاولة بعد قليل.",
+    "invalidKey": "مفتاح API غير صالح. تحقق من RAPID_API_KEY في ملف env.‎",
+    "http": "فشل الطلب ({{status}}). يرجى المحاولة مرة أخرى.",
+    "network": "خطأ في الشبكة. تحقق من اتصالك وحاول مرة أخرى.",
+    "unknown": "حدث خطأ ما."
+  }
+}

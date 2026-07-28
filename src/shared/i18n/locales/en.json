@@ -1,0 +1,74 @@
+{
+  "app": {
+    "title": "Hearthstone Cards",
+    "subtitleLoaded": "{{loaded}} of {{total}} cards loaded",
+    "subtitleFiltered": "{{visible}} of {{loaded}} loaded cards"
+  },
+  "search": {
+    "placeholder": "Search cards by name",
+    "label": "Search cards by name",
+    "clear": "Clear search"
+  },
+  "filters": {
+    "type": "Type",
+    "class": "Class",
+    "rarity": "Rarity",
+    "all": "All",
+    "allOf": "All {{label}}",
+    "clear": "Clear ({{count}})",
+    "clearLabel": "Clear all filters",
+    "dropdownLabel": "{{label}} filter, {{selected}} selected",
+    "noOptions": "No options loaded yet. Load more cards to see them."
+  },
+  "card": {
+    "unknownType": "Unknown",
+    "neutralClass": "Neutral",
+    "noRarity": "—",
+    "stats": "{{attack}} ATK / {{health}} HP"
+  },
+  "cardTypes": {
+    "minion": "Minion",
+    "spell": "Spell",
+    "weapon": "Weapon",
+    "hero": "Hero",
+    "location": "Location"
+  },
+  "cardRarities": {
+    "free": "Free",
+    "common": "Common",
+    "rare": "Rare",
+    "epic": "Epic",
+    "legendary": "Legendary"
+  },
+  "cardClasses": {
+    "neutral": "Neutral",
+    "demonhunter": "Demon Hunter",
+    "druid": "Druid",
+    "hunter": "Hunter",
+    "mage": "Mage",
+    "paladin": "Paladin",
+    "priest": "Priest",
+    "rogue": "Rogue",
+    "shaman": "Shaman",
+    "warlock": "Warlock",
+    "warrior": "Warrior"
+  },
+  "list": {
+    "loading": "Loading cards…",
+    "retry": "Try again",
+    "empty": "No cards match your filters.",
+    "emptyHint": "Only the cards loaded so far are searched. Load more to widen the search.",
+    "loadMoreCards": "Load more cards",
+    "loadMore": "Load more",
+    "allLoaded": "All {{total}} cards loaded.",
+    "progress": "{{loaded}} of {{total}} loaded",
+    "progressFiltered": "{{loaded}} of {{total}} loaded · clear filters to auto-load on scroll"
+  },
+  "errors": {
+    "rateLimit": "Rate limit reached. Please try again in a moment.",
+    "invalidKey": "Invalid API key. Check RAPID_API_KEY in your .env.",
+    "http": "Request failed ({{status}}). Please try again.",
+    "network": "Network error. Check your connection and try again.",
+    "unknown": "Something went wrong."
+  }
+}

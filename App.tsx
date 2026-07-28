@@ -1,45 +1,25 @@
 /**
- * Sample React Native App
- * https://github.com/facebook/react-native
+ * Hearthstone card browser.
  *
  * @format
  */
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import React from "react";
+import { StatusBar } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import MainScreen from "./src/screens/MainScreen/MainScreen";
+import colors from "./src/theme/colors";
+import { I18nProvider } from "./src/shared/i18n";
 
 function App() {
-  const isDarkMode = useColorScheme() === 'dark';
-
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
-    </SafeAreaProvider>
+    <I18nProvider initialLanguage="en">
+      <SafeAreaProvider>
+        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+        <MainScreen />
+      </SafeAreaProvider>
+    </I18nProvider>
   );
 }
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
 
 export default App;
