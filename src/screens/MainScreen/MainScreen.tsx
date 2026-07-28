@@ -6,12 +6,17 @@ import { useMainScreen } from "./hooks/useMainScreen";
 import CardItem from "../../components/CardItem";
 import FilterBar from "../../components/FilterBar";
 import { EmptyState, ErrorState, ListFooter, LoadingState } from "../../components/ListStates";
-import { Card } from "../../../types/heartstone-api/type";
-import { CustomText, CustomView } from "../../shared/components";
-import { cardIdentity } from "./utils/cardIdentity";
+import { CardWithId } from "../../../types/heartstone-api/type";
+import { CustomPressable, CustomText, CustomView } from "../../shared/components";
+import { useTranslation } from "../../shared/i18n";
 
 const MainScreen = () => {
   const styles = useMemo(() => createStyles(), []);
+  const { t, i18n } = useTranslation();
+  const toggleLanguage = useCallback(() => {
+    i18n.changeLanguage(i18n.language === "ar" ? "en" : "ar");
+  }, [i18n]);
+
   const {
     cards,
     search,
@@ -37,23 +42,19 @@ const MainScreen = () => {
     retry,
   } = useMainScreen();
 
-  const renderItem = useCallback(({ item }: { item: Card }) => <CardItem card={item} />, []);
+  const renderItem = useCallback(({ item }: { item: CardWithId }) => <CardItem card={item} />, []);
 
-  // slug repeats across reprints, so it would produce duplicate React keys.
-  const keyExtractor = useCallback((item: Card) => cardIdentity(item), []);
+  const keyExtractor = useCallback((item: CardWithId) => item.id, []);
 
-  // A failure part-way through paging must stay visible without wiping the
-  // cards already on screen.
   const listFooter = useMemo(() => {
     if (error) {
       return <ErrorState error={error} onRetry={retry} />;
     }
-    // FlashList renders the empty component and the footer together, and
-    // EmptyState already offers "Load more cards" - a footer button here would
-    // be a second, identical control.
+
     if (cards.length === 0) {
       return null;
     }
+
     return (
       <ListFooter
         isLoadingMore={isLoadingMore}
@@ -71,14 +72,50 @@ const MainScreen = () => {
     [hasMore, loadMore, loadedCount, totalCount],
   );
 
+  function renderBody() {
+    if (isInitialLoading) {
+      return <LoadingState />;
+    }
+    if (error && loadedCount === 0) {
+      return <ErrorState error={error} onRetry={retry} />;
+    }
+
+    console.log(cards, "cards---------->");
+    return (
+      <FlashList
+        testID="cards-list"
+        data={cards}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        contentContainerStyle={styles.listContent}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.5}
+        onScrollBeginDrag={onScrollBegin}
+        ListEmptyComponent={listEmpty}
+        ListFooterComponent={listFooter}
+        keyboardShouldPersistTaps="handled"
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <CustomView style={styles.header}>
-        <CustomText variant="title" tx="app.title" />
-        <CustomText
-          variant="subtitle"
-          tx={isFiltering ? "app.subtitleFiltered" : "app.subtitleLoaded"}
-          txParams={{ visible: visibleCount, loaded: loadedCount, total: totalCount }}
+      <CustomView row style={styles.header}>
+        <CustomView style={styles.headerTexts}>
+          <CustomText variant="title">{t("app.title")}</CustomText>
+          <CustomText variant="subtitle">
+            {isFiltering
+              ? t("app.subtitleFiltered", { visible: visibleCount, loaded: loadedCount })
+              : t("app.subtitleLoaded", { loaded: loadedCount, total: totalCount })}
+          </CustomText>
+        </CustomView>
+
+        <CustomPressable
+          testID="language-toggle"
+          variant="pill"
+          label={t("app.otherLanguage")}
+          accessibilityLabel={t("app.changeLanguage")}
+          onPress={toggleLanguage}
         />
       </CustomView>
 
@@ -96,25 +133,7 @@ const MainScreen = () => {
         activeFilterCount={activeFilterCount}
       />
 
-      {isInitialLoading ? (
-        <LoadingState />
-      ) : error && loadedCount === 0 ? (
-        <ErrorState error={error} onRetry={retry} />
-      ) : (
-        <FlashList
-          testID="cards-list"
-          data={cards}
-          renderItem={renderItem}
-          keyExtractor={keyExtractor}
-          contentContainerStyle={styles.listContent}
-          onEndReached={onEndReached}
-          onEndReachedThreshold={0.5}
-          onMomentumScrollBegin={onScrollBegin}
-          ListEmptyComponent={listEmpty}
-          ListFooterComponent={listFooter}
-          keyboardShouldPersistTaps="handled"
-        />
-      )}
+      {renderBody()}
     </SafeAreaView>
   );
 };

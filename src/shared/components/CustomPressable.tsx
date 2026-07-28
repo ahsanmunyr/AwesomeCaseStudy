@@ -1,24 +1,22 @@
 import React, { memo, useCallback } from "react";
-import { Pressable, PressableProps, StyleSheet, ViewStyle } from "react-native";
+import { Pressable, PressableProps, StyleProp, StyleSheet, ViewStyle } from "react-native";
 import colors from "../../theme/colors";
 import CustomText from "./CustomText";
-import { TranslationKey, TranslationParams, useTranslation } from "../i18n";
+import { useIsRTL } from "../i18n";
 
 export type PressableVariant = "primary" | "pill" | "pillActive" | "danger" | "plain";
 
-export interface CustomPressableProps extends Omit<PressableProps, "children" | "accessibilityLabel"> {
+export interface CustomPressableProps extends Omit<PressableProps, "children" | "style"> {
   variant?: PressableVariant;
-  /** Renders a correctly styled label without callers touching Text. */
-  tx?: TranslationKey;
-  txParams?: TranslationParams;
-  /** Translation key for the accessibility label. */
-  accessibilityTx?: TranslationKey;
-  accessibilityTxParams?: TranslationParams;
+  /** Button text. Already translated by the caller. */
+  label?: string;
+  /** Use instead of label when the button needs custom content. */
   children?: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
-const labelVariant = {
+/** Which text style goes with which button style. */
+const textVariantFor = {
   primary: "buttonPrimary",
   pill: "buttonPill",
   pillActive: "buttonPillActive",
@@ -26,36 +24,41 @@ const labelVariant = {
   plain: "body",
 } as const;
 
-const CustomPressable = ({
-  variant = "primary",
-  tx,
-  txParams,
-  accessibilityTx,
-  accessibilityTxParams,
-  children,
-  style,
-  ...rest
-}: CustomPressableProps) => {
-  const { t } = useTranslation();
+/**
+ * The only button of the app. Pass `label` for a normal text button, or
+ * `children` when the button holds something else (an icon, a row of text).
+ */
+const CustomPressable = ({ variant = "primary", label, children, style, ...rest }: CustomPressableProps) => {
+  // Only the pill variants lay their children out in a row, so only they need
+  // mirroring. The "plain" variant is also used as a full-screen backdrop and
+  // as a column, and reversing those would break the layout.
+  const isRTL = useIsRTL();
+  const mirrorRow = isRTL && (variant === "pill" || variant === "pillActive");
 
+  // Pressable wants a function so it can restyle while the finger is down.
+  // useCallback keeps that function stable between renders.
   const buildStyle = useCallback(
-    ({ pressed }: { pressed: boolean }) => [variantStyles[variant], pressed && styles.pressed, style],
-    [variant, style],
+    ({ pressed }: { pressed: boolean }) => [variantStyles[variant], mirrorRow && styles.rowReverse, pressed && styles.pressed, style],
+    [variant, mirrorRow, style],
   );
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityTx ? t(accessibilityTx, accessibilityTxParams) : undefined}
-      style={buildStyle}
-      {...rest}>
-      {tx ? <CustomText variant={labelVariant[variant]} tx={tx} txParams={txParams} numberOfLines={1} /> : children}
+    <Pressable accessibilityRole="button" style={buildStyle} {...rest}>
+      {label !== undefined ? (
+        <CustomText variant={textVariantFor[variant]} numberOfLines={1}>
+          {label}
+        </CustomText>
+      ) : (
+        children
+      )}
     </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
+  // Puts the dropdown caret on the left of its label in Arabic.
+  rowReverse: { flexDirection: "row-reverse" },
 });
 
 const variantStyles = StyleSheet.create({

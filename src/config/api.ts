@@ -1,12 +1,13 @@
 import axios, { AxiosInstance } from "axios";
 import Config from "react-native-config";
-import APIS from "./baseURLs";
+import API from "./baseURLs";
 
-export const REQUEST_TIMEOUT_MS = 15000; // this value should be coming from the cms or server, we can handle it when App live
+// Give up on a request after 15 seconds. should be coming from cms
+export const REQUEST_TIMEOUT_MS = 15000;
 
-export function createAjaxInstance(): AxiosInstance {
+export function createApiClient(): AxiosInstance {
   return axios.create({
-    baseURL: APIS.GET_BASE_URL,
+    baseURL: API.BASE_URL,
     timeout: REQUEST_TIMEOUT_MS,
     headers: {
       "content-type": "application/json",
@@ -16,4 +17,4 @@ export function createAjaxInstance(): AxiosInstance {
   });
 }
 
-export default createAjaxInstance;
+export default createApiClient;

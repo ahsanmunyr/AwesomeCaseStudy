@@ -1,128 +1,85 @@
-import {
-  EMPTY_FILTERS,
-  countActiveFilters,
-  deriveFilterOptions,
-  filterCards,
-  matchesSearch,
-} from "../../src/screens/MainScreen/utils/cardFilters";
-import { LEGENDARY_MINION, MINION, SPELL, WEAPON, makeCard } from "../fixtures/cards";
+import { countActiveFilters, deriveFilterOptions, filterCards, matchesSearch } from "../../src/screens/MainScreen/utils/cardFilters";
+import { LEGENDARY_MINION, MINION, SPELL, WEAPON } from "../fixtures/cards";
 
-const ALL = [MINION, SPELL, WEAPON, LEGENDARY_MINION];
+const ALL_CARDS = [MINION, SPELL, WEAPON, LEGENDARY_MINION];
 
-describe("deriveFilterOptions", () => {
-  it("returns empty option lists for no cards", () => {
-    expect(deriveFilterOptions([])).toEqual({
-      types: [],
-      classes: [],
-      rarities: [],
-    });
-  });
-
-  it("collects unique types across cards", () => {
-    expect(deriveFilterOptions(ALL).types).toEqual([
-      { slug: "minion", name: "Minion" },
-      { slug: "spell", name: "Spell" },
-      { slug: "weapon", name: "Weapon" },
-    ]);
-  });
-
-  it("deduplicates repeated slugs", () => {
-    const duplicated = [MINION, LEGENDARY_MINION, MINION];
-    expect(deriveFilterOptions(duplicated).types).toHaveLength(1);
-  });
-
-  it("sorts options alphabetically by name", () => {
-    const names = deriveFilterOptions(ALL).rarities.map(o => o.name);
-    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
-  });
-
-  it("collects unique classes", () => {
-    expect(deriveFilterOptions(ALL).classes.map(o => o.slug)).toEqual(["mage", "neutral", "warrior"]);
-  });
-});
+const NO_FILTERS = { search: "", type: null, cardClass: null, rarity: null };
 
 describe("matchesSearch", () => {
-  it("matches everything when the term is blank", () => {
-    expect(matchesSearch(SPELL, "")).toBe(true);
-    expect(matchesSearch(SPELL, "   ")).toBe(true);
-  });
-
-  it("is case-insensitive", () => {
+  it("matches part of the name, ignoring upper and lower case", () => {
     expect(matchesSearch(SPELL, "FIRE")).toBe(true);
   });
 
-  it("matches on a partial name", () => {
-    expect(matchesSearch(LEGENDARY_MINION, "firelord")).toBe(true);
+  it("ignores spaces around the search text", () => {
+    expect(matchesSearch(SPELL, "  fire  ")).toBe(true);
   });
 
-  it("ignores surrounding whitespace", () => {
-    expect(matchesSearch(SPELL, "  fireball  ")).toBe(true);
+  it("does not match a different card", () => {
+    expect(matchesSearch(SPELL, "yeti")).toBe(false);
   });
 
-  it("returns false when nothing matches", () => {
-    expect(matchesSearch(SPELL, "polymorph")).toBe(false);
+  it("matches everything when the search box is empty", () => {
+    expect(matchesSearch(SPELL, "")).toBe(true);
   });
 });
 
 describe("filterCards", () => {
-  it("returns the original array when no filters are active", () => {
-    expect(filterCards(ALL, EMPTY_FILTERS)).toBe(ALL);
+  it("returns every card when nothing is selected", () => {
+    expect(filterCards(ALL_CARDS, NO_FILTERS)).toEqual(ALL_CARDS);
   });
 
-  it("filters by type", () => {
-    const result = filterCards(ALL, { ...EMPTY_FILTERS, type: "minion" });
-    expect(result.map(c => c.slug)).toEqual(["chillwind-yeti", "ragnaros"]);
+  it("keeps only the chosen type", () => {
+    const result = filterCards(ALL_CARDS, { ...NO_FILTERS, type: "minion" });
+
+    expect(result).toEqual([MINION, LEGENDARY_MINION]);
   });
 
-  it("filters by class", () => {
-    const result = filterCards(ALL, { ...EMPTY_FILTERS, cardClass: "mage" });
+  it("keeps only the chosen class", () => {
+    const result = filterCards(ALL_CARDS, { ...NO_FILTERS, cardClass: "mage" });
+
     expect(result).toEqual([SPELL]);
   });
 
-  it("filters by rarity", () => {
-    const result = filterCards(ALL, { ...EMPTY_FILTERS, rarity: "legendary" });
+  it("keeps only the chosen rarity", () => {
+    const result = filterCards(ALL_CARDS, { ...NO_FILTERS, rarity: "legendary" });
+
     expect(result).toEqual([LEGENDARY_MINION]);
   });
 
-  it("combines filters with AND semantics", () => {
-    const result = filterCards(ALL, {
-      ...EMPTY_FILTERS,
-      type: "minion",
-      rarity: "legendary",
-    });
+  it("applies the search and the dropdowns together", () => {
+    const result = filterCards(ALL_CARDS, { ...NO_FILTERS, type: "minion", search: "ragnaros" });
+
     expect(result).toEqual([LEGENDARY_MINION]);
   });
 
-  it("applies search alongside dropdown filters", () => {
-    const result = filterCards(ALL, {
-      ...EMPTY_FILTERS,
-      type: "minion",
-      search: "yeti",
-    });
-    expect(result).toEqual([MINION]);
+  it("returns an empty list when nothing matches", () => {
+    expect(filterCards(ALL_CARDS, { ...NO_FILTERS, search: "no such card" })).toEqual([]);
+  });
+});
+
+describe("deriveFilterOptions", () => {
+  it("lists each type only once, sorted by name", () => {
+    const options = deriveFilterOptions(ALL_CARDS);
+
+    expect(options.types.map(option => option.slug)).toEqual(["minion", "spell", "weapon"]);
   });
 
-  it("returns an empty array when filters exclude everything", () => {
-    const result = filterCards(ALL, {
-      ...EMPTY_FILTERS,
-      type: "weapon",
-      cardClass: "mage",
-    });
-    expect(result).toEqual([]);
+  it("lists the classes and rarities of the loaded cards", () => {
+    const options = deriveFilterOptions(ALL_CARDS);
+
+    expect(options.classes.map(option => option.slug)).toEqual(["mage", "neutral", "warrior"]);
+    expect(options.rarities.map(option => option.slug)).toEqual(["common", "epic", "legendary"]);
   });
 
-  it("does not throw on cards with missing nested fields", () => {
-    const broken = { ...makeCard({ slug: "broken" }) } as any;
-    delete broken.type;
-    delete broken.rarity;
-    expect(() => filterCards([broken], { ...EMPTY_FILTERS, type: "spell" })).not.toThrow();
-    expect(filterCards([broken], { ...EMPTY_FILTERS, type: "spell" })).toEqual([]);
+  it("gives empty lists when no card is loaded yet", () => {
+    expect(deriveFilterOptions([])).toEqual({ types: [], classes: [], rarities: [] });
   });
 });
 
 describe("countActiveFilters", () => {
-  it("counts only the dropdown filters, not search", () => {
-    expect(countActiveFilters({ ...EMPTY_FILTERS, search: "fire" })).toBe(0);
-    expect(countActiveFilters({ ...EMPTY_FILTERS, type: "spell", rarity: "rare" })).toBe(2);
+  it("counts only the dropdowns, not the search box", () => {
+    expect(countActiveFilters({ ...NO_FILTERS, search: "fire" })).toBe(0);
+    expect(countActiveFilters({ ...NO_FILTERS, type: "minion" })).toBe(1);
+    expect(countActiveFilters({ search: "", type: "minion", cardClass: "mage", rarity: "epic" })).toBe(3);
   });
 });

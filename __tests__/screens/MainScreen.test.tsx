@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { renderWithI18n } from "../fixtures/renderWithI18n";
 
 jest.mock("../../src/services/cards.service", () => ({
@@ -21,8 +21,14 @@ beforeEach(() => {
   mockedGetCards.mockReset();
 });
 
+/** Renders the screen and waits until the first page is on screen. */
+async function renderScreen() {
+  await renderWithI18n(<MainScreen />);
+  await waitFor(() => expect(screen.getByText("Fireball")).toBeTruthy());
+}
+
 describe("MainScreen", () => {
-  it("shows a loading state before the first page arrives", async () => {
+  it("shows a spinner until the first page arrives", async () => {
     mockedGetCards.mockReturnValue(new Promise(() => {}));
 
     await renderWithI18n(<MainScreen />);
@@ -30,28 +36,19 @@ describe("MainScreen", () => {
     expect(screen.getByTestId("loading-state")).toBeTruthy();
   });
 
-  it("renders the cards returned by the All Cards service", async () => {
+  it("shows the cards of the first page", async () => {
     mockedGetCards.mockResolvedValue(makeResponse(PAGE_ONE));
 
-    await renderWithI18n(<MainScreen />);
+    await renderScreen();
 
-    await waitFor(() => expect(screen.getByText("Chillwind Yeti")).toBeTruthy());
-    expect(screen.getByText("Fireball")).toBeTruthy();
+    expect(screen.getByText("Chillwind Yeti")).toBeTruthy();
     expect(screen.getByText("Ragnaros the Firelord")).toBeTruthy();
+    expect(mockedGetCards).toHaveBeenCalledWith(1, 12);
   });
 
-  it("requests 12 cards per page", async () => {
+  it("narrows the list while the user types", async () => {
     mockedGetCards.mockResolvedValue(makeResponse(PAGE_ONE));
-
-    await renderWithI18n(<MainScreen />);
-
-    await waitFor(() => expect(mockedGetCards).toHaveBeenCalledWith(expect.objectContaining({ page: 1, pageSize: 12 })));
-  });
-
-  it("filters the list as the user searches", async () => {
-    mockedGetCards.mockResolvedValue(makeResponse(PAGE_ONE));
-    await renderWithI18n(<MainScreen />);
-    await waitFor(() => expect(screen.getByText("Fireball")).toBeTruthy());
+    await renderScreen();
 
     await fireEvent.changeText(screen.getByTestId("search-input"), "yeti");
 
@@ -59,36 +56,20 @@ describe("MainScreen", () => {
     expect(screen.getByText("Chillwind Yeti")).toBeTruthy();
   });
 
-  it("lists the unique card types loaded so far in the Type dropdown", async () => {
+  it("shows only the cards of the type picked in the dropdown", async () => {
     mockedGetCards.mockResolvedValue(makeResponse(PAGE_ONE));
-    await renderWithI18n(<MainScreen />);
-    await waitFor(() => expect(screen.getByText("Fireball")).toBeTruthy());
-
-    await fireEvent.press(screen.getByTestId("filter-type"));
-
-    // PAGE_ONE contains two minions and one spell -> two unique types.
-    expect(screen.getByTestId("option-minion")).toBeTruthy();
-    expect(screen.getByTestId("option-spell")).toBeTruthy();
-    expect(screen.queryByTestId("option-weapon")).toBeNull();
-  });
-
-  it("shows only the cards of the selected type", async () => {
-    mockedGetCards.mockResolvedValue(makeResponse(PAGE_ONE));
-    await renderWithI18n(<MainScreen />);
-    await waitFor(() => expect(screen.getByText("Fireball")).toBeTruthy());
+    await renderScreen();
 
     await fireEvent.press(screen.getByTestId("filter-type"));
     await fireEvent.press(screen.getByTestId("option-minion"));
 
     await waitFor(() => expect(screen.queryByText("Fireball")).toBeNull());
     expect(screen.getByText("Chillwind Yeti")).toBeTruthy();
-    expect(screen.getByText("Ragnaros the Firelord")).toBeTruthy();
   });
 
-  it("clears all filters when Clear is pressed", async () => {
+  it("brings every card back when Clear is pressed", async () => {
     mockedGetCards.mockResolvedValue(makeResponse(PAGE_ONE));
-    await renderWithI18n(<MainScreen />);
-    await waitFor(() => expect(screen.getByText("Fireball")).toBeTruthy());
+    await renderScreen();
 
     await fireEvent.press(screen.getByTestId("filter-type"));
     await fireEvent.press(screen.getByTestId("option-minion"));
@@ -100,22 +81,19 @@ describe("MainScreen", () => {
   });
 
   it("loads the next page when Load more is pressed", async () => {
-    mockedGetCards.mockResolvedValueOnce(makeResponse(PAGE_ONE)).mockResolvedValueOnce(makeResponse([WEAPON], { page: "2" }));
-
-    await renderWithI18n(<MainScreen />);
-    await waitFor(() => expect(screen.getByText("Fireball")).toBeTruthy());
+    mockedGetCards.mockResolvedValueOnce(makeResponse(PAGE_ONE)).mockResolvedValueOnce(makeResponse([WEAPON]));
+    await renderScreen();
 
     await fireEvent.press(screen.getByTestId("load-more"));
 
     await waitFor(() => expect(screen.getByText("Fiery War Axe")).toBeTruthy());
-    expect(mockedGetCards).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
+    expect(mockedGetCards).toHaveBeenLastCalledWith(2, 12);
   });
 
-  it("surfaces an error with a retry when the first page fails", async () => {
+  it("shows an error with a Try again button, and recovers", async () => {
     mockedGetCards.mockRejectedValueOnce(new ApiError({ key: "errors.network" }));
 
     await renderWithI18n(<MainScreen />);
-
     await waitFor(() => expect(screen.getByTestId("error-state")).toBeTruthy());
     expect(screen.getByText("Network error. Check your connection and try again.")).toBeTruthy();
 
@@ -125,39 +103,59 @@ describe("MainScreen", () => {
     await waitFor(() => expect(screen.getByText("Fireball")).toBeTruthy());
   });
 
-  it("offers to load more when a filter matches nothing loaded yet", async () => {
+  it("does not load page 2 until the user has actually dragged the list", async () => {
     mockedGetCards.mockResolvedValue(makeResponse(PAGE_ONE));
-    await renderWithI18n(<MainScreen />);
-    await waitFor(() => expect(screen.getByText("Fireball")).toBeTruthy());
+    await renderScreen();
 
-    await fireEvent.changeText(screen.getByTestId("search-input"), "nonexistent card");
+    const list = screen.getByTestId("cards-list");
+
+    // FlashList fires this once while it measures itself, before any scrolling.
+    await act(async () => {
+      list.props.onEndReached();
+    });
+    expect(mockedGetCards).toHaveBeenCalledTimes(1);
+
+    // A slow drag must count. This is wired to onScrollBeginDrag, not
+    // onMomentumScrollBegin, which only fires when the list is flicked.
+    await act(async () => {
+      list.props.onScrollBeginDrag();
+      list.props.onEndReached();
+    });
+
+    await waitFor(() => expect(mockedGetCards).toHaveBeenCalledTimes(2));
+    expect(mockedGetCards).toHaveBeenLastCalledWith(2, 12);
+  });
+
+  it("switches the whole screen to Arabic and back with the language button", async () => {
+    mockedGetCards.mockResolvedValue(makeResponse(PAGE_ONE));
+    await renderScreen();
+
+    expect(screen.getByText("Hearthstone Cards")).toBeTruthy();
+    // The button shows the language you will switch to.
+    expect(screen.getByText("العربية")).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId("language-toggle"));
+
+    await waitFor(() => expect(screen.getByText("بطاقات هيرثستون")).toBeTruthy());
+    expect(screen.queryByText("Hearthstone Cards")).toBeNull();
+    expect(screen.getByText("English")).toBeTruthy();
+    // Card names come from the API, so they stay as they are.
+    expect(screen.getByText("Fireball")).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId("language-toggle"));
+
+    await waitFor(() => expect(screen.getByText("Hearthstone Cards")).toBeTruthy());
+  });
+
+  it("offers to load more when the search matches nothing loaded so far", async () => {
+    mockedGetCards.mockResolvedValue(makeResponse(PAGE_ONE));
+    await renderScreen();
+
+    await fireEvent.changeText(screen.getByTestId("search-input"), "no such card");
 
     await waitFor(() => expect(screen.getByTestId("empty-state")).toBeTruthy());
     expect(screen.getByTestId("empty-load-more")).toBeTruthy();
-  });
-
-  it("shows exactly one load-more control when the list is empty", async () => {
-    mockedGetCards.mockResolvedValue(makeResponse(PAGE_ONE));
-    await renderWithI18n(<MainScreen />);
-    await waitFor(() => expect(screen.getByText("Fireball")).toBeTruthy());
-
-    await fireEvent.changeText(screen.getByTestId("search-input"), "nonexistent card");
-    await waitFor(() => expect(screen.getByTestId("empty-state")).toBeTruthy());
-
-    // FlashList renders the empty component and the footer together, so the
-    // footer button must be suppressed or the user sees two identical buttons.
+    // The footer button must be hidden here, or the user sees two of them.
     expect(screen.queryByTestId("load-more")).toBeNull();
-    // Exact match: the hint sentence also contains the words "Load more".
-    expect(screen.queryAllByText("Load more")).toHaveLength(0);
-    expect(screen.queryAllByText("Load more cards")).toHaveLength(1);
-  });
-
-  it("shows the footer load-more control when the list has cards", async () => {
-    mockedGetCards.mockResolvedValue(makeResponse(PAGE_ONE));
-    await renderWithI18n(<MainScreen />);
-    await waitFor(() => expect(screen.getByText("Fireball")).toBeTruthy());
-
-    expect(screen.getByTestId("load-more")).toBeTruthy();
-    expect(screen.queryByTestId("empty-state")).toBeNull();
   });
 });

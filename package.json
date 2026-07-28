@@ -16,8 +16,10 @@
     "@shopify/flash-list": "^2.3.2",
     "axios": "^1.18.1",
     "i": "^0.3.7",
+    "i18next": "^26.3.6",
     "npm": "^11.18.0",
     "react": "19.2.3",
+    "react-i18next": "^17.0.11",
     "react-native": "0.86.2",
     "react-native-config": "^1.6.1",
     "react-native-safe-area-context": "^5.5.2"

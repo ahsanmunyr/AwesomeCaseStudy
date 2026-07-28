@@ -3,20 +3,23 @@ import { ActivityIndicator, ActivityIndicatorProps, StyleSheet } from "react-nat
 import colors from "../../theme/colors";
 import CustomText from "./CustomText";
 import CustomView from "./CustomView";
-import { TranslationKey } from "../i18n";
 
 export interface CustomLoaderProps extends Omit<ActivityIndicatorProps, "color"> {
-  /** Optional caption rendered under the spinner. */
-  tx?: TranslationKey;
+  /** Optional text shown under the spinner. Already translated by the caller. */
+  caption?: string;
   color?: string;
-  /** Fills the available space and centres itself. */
+  /** Fills the whole space and centres itself. Used for the first load. */
   fullscreen?: boolean;
 }
 
-const CustomLoader = ({ tx, size = "small", color = colors.accent, fullscreen, testID, ...rest }: CustomLoaderProps) => (
+const CustomLoader = ({ caption, size = "small", color = colors.accent, fullscreen, testID, ...rest }: CustomLoaderProps) => (
   <CustomView testID={testID} center flex={fullscreen} style={styles.container}>
     <ActivityIndicator size={size} color={color} {...rest} />
-    {tx ? <CustomText variant="subtitle" tx={tx} style={styles.caption} /> : null}
+    {caption ? (
+      <CustomText variant="subtitle" style={styles.caption}>
+        {caption}
+      </CustomText>
+    ) : null}
   </CustomView>
 );
 

@@ -1,11 +1,10 @@
-const APIS = {
-  // we can use here any cms to get all api url when splash screen is load
-  get GET_BASE_URL() {
-    return "https://hearthstone11.p.rapidapi.com";
-  },
-  get CARDS() {
-    return "/cards";
-  },
+/**
+ * Every URL the app talks to, in one place. In a bigger app these would come
+ * from a CMS or a config service while the splash screen is showing.
+ */
+const API = {
+  BASE_URL: "https://hearthstone11.p.rapidapi.com",
+  CARDS: "/cards",
 };
 
-export default APIS;
+export default API;

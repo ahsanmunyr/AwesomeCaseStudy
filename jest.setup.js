@@ -22,12 +22,23 @@ jest.mock("@shopify/flash-list", () => {
   const React = require("react");
   const { View } = require("react-native");
 
-  const FlashList = ({ data = [], renderItem, keyExtractor, ListEmptyComponent, ListFooterComponent, testID }) => {
+  const FlashList = ({
+    data = [],
+    renderItem,
+    keyExtractor,
+    ListEmptyComponent,
+    ListFooterComponent,
+    testID,
+    onEndReached,
+    onScrollBeginDrag,
+  }) => {
     const renderNode = node => (typeof node === "function" ? React.createElement(node) : node ?? null);
 
+    // The scroll callbacks are put on the stub so a test can fire them and
+    // check how the screen wired them up.
     return React.createElement(
       View,
-      { testID },
+      { testID, onEndReached, onScrollBeginDrag },
       data.length === 0
         ? renderNode(ListEmptyComponent)
         : data.map((item, index) =>

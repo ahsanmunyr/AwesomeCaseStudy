@@ -1,29 +1,35 @@
-import React, { memo, useCallback, useMemo } from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import { Modal, ScrollView, StyleSheet } from "react-native";
 import colors from "../theme/colors";
 import { FilterOption } from "../screens/MainScreen/utils/cardFilters";
 import { CustomPressable, CustomText } from "../shared/components";
-import { TranslationKey, useTranslation } from "../shared/i18n";
+import { TranslationKey, useIsRTL, useTranslation } from "../shared/i18n";
 
 interface Props {
-  /** Translation key for the filter's own name, e.g. `filters.type`. */
-  labelTx: TranslationKey;
-  /** Locale namespace holding translations for this filter's API slugs. */
+  /** The name of the filter, already translated, e.g. "Type". */
+  label: string;
+  /** Where to look for translations of this filter's slugs, e.g. "cardTypes". */
   namespace: string;
   options: FilterOption[];
+  /** The chosen slug, or null for "All". */
   value: string | null;
   onChange: (slug: string | null) => void;
   testID?: string;
 }
 
+/** The slug we give the "All" row. It is not a real card value. */
 const ALL_SLUG = "__all__";
 
-/** Stops a tap inside the sheet from reaching the closing backdrop. */
-const swallowPress = () => {};
-
-const FilterDropdown = ({ labelTx, namespace, options, value, onChange, testID }: Props) => {
-  const { t, tApi } = useTranslation();
-  const [isOpen, setIsOpen] = React.useState(false);
+/**
+ * A pill button that opens a bottom sheet of choices.
+ *
+ * Tapping the dark background closes the sheet, so the sheet itself needs an
+ * onPress that does nothing - otherwise the tap would go through to the
+ * background and close the sheet while the user is choosing.
+ */
+const FilterDropdown = ({ label, namespace, options, value, onChange, testID }: Props) => {
+  const { t } = useTranslation();
+  const [isOpen, setIsOpen] = useState(false);
 
   const open = useCallback(() => setIsOpen(true), []);
   const close = useCallback(() => setIsOpen(false), []);
@@ -36,15 +42,19 @@ const FilterDropdown = ({ labelTx, namespace, options, value, onChange, testID }
     [onChange],
   );
 
-  // API slugs are resolved through the locale files so Arabic shows Arabic
-  // card metadata, falling back to the server's English name for new slugs.
-  const localised = useMemo(
-    () => options.map(option => ({ slug: option.slug, name: tApi(`${namespace}.${option.slug}`, option.name) })),
-    [options, namespace, tApi],
+  // Translate the option names once per list, not on every render. The slugs
+  // come from the API, so `defaultValue` shows the English name the server sent
+  // whenever we have no translation for one.
+  const translatedOptions = useMemo(
+    () =>
+      options.map(option => ({
+        slug: option.slug,
+        name: t(`${namespace}.${option.slug}` as TranslationKey, { defaultValue: option.name }),
+      })),
+    [options, namespace, t],
   );
 
-  const label = t(labelTx);
-  const selected = localised.find(option => option.slug === value);
+  const selected = translatedOptions.find(option => option.slug === value);
   const isActive = Boolean(selected);
 
   return (
@@ -52,8 +62,7 @@ const FilterDropdown = ({ labelTx, namespace, options, value, onChange, testID }
       <CustomPressable
         testID={testID}
         variant={isActive ? "pillActive" : "pill"}
-        accessibilityTx="filters.dropdownLabel"
-        accessibilityTxParams={{ label, selected: selected?.name ?? t("filters.all") }}
+        accessibilityLabel={t("filters.dropdownLabel", { label, selected: selected?.name ?? t("filters.all") })}
         onPress={open}>
         <CustomText variant={isActive ? "buttonPillActive" : "buttonPill"} numberOfLines={1}>
           {selected ? selected.name : label}
@@ -65,11 +74,15 @@ const FilterDropdown = ({ labelTx, namespace, options, value, onChange, testID }
 
       <Modal visible={isOpen} transparent animationType="fade" onRequestClose={close}>
         <CustomPressable variant="plain" style={styles.backdrop} onPress={close}>
-          <CustomPressable variant="plain" style={styles.sheet} onPress={swallowPress}>
-            <CustomText variant="bodyStrong" tx={labelTx} style={styles.sheetTitle} />
+          <CustomPressable variant="plain" style={styles.sheet} onPress={doNothing}>
+            <CustomText variant="bodyStrong" style={styles.sheetTitle}>
+              {label}
+            </CustomText>
+
             <ScrollView bounces={false}>
               <Option slug={ALL_SLUG} name={t("filters.allOf", { label })} isSelected={!value} onSelect={handleSelect} />
-              {localised.map(option => (
+
+              {translatedOptions.map(option => (
                 <Option
                   key={option.slug}
                   slug={option.slug}
@@ -78,7 +91,12 @@ const FilterDropdown = ({ labelTx, namespace, options, value, onChange, testID }
                   onSelect={handleSelect}
                 />
               ))}
-              {options.length === 0 && <CustomText variant="caption" tx="filters.noOptions" style={styles.emptyText} />}
+
+              {options.length === 0 && (
+                <CustomText variant="caption" style={styles.emptyText}>
+                  {t("filters.noOptions")}
+                </CustomText>
+              )}
             </ScrollView>
           </CustomPressable>
         </CustomPressable>
@@ -87,6 +105,9 @@ const FilterDropdown = ({ labelTx, namespace, options, value, onChange, testID }
   );
 };
 
+/** Keeps a tap inside the sheet from reaching the background behind it. */
+function doNothing() {}
+
 interface OptionProps {
   slug: string;
   name: string;
@@ -94,10 +115,13 @@ interface OptionProps {
   onSelect: (slug: string) => void;
 }
 
+/** One row inside the open sheet. */
 const Option = memo(({ slug, name, isSelected, onSelect }: OptionProps) => {
+  const isRTL = useIsRTL();
   const handlePress = useCallback(() => onSelect(slug), [onSelect, slug]);
+
   return (
-    <CustomPressable testID={`option-${slug}`} variant="plain" onPress={handlePress} style={styles.option}>
+    <CustomPressable testID={`option-${slug}`} variant="plain" onPress={handlePress} style={[styles.option, isRTL && styles.optionRTL]}>
       <CustomText variant="body" color={isSelected ? colors.accent : undefined} style={isSelected ? styles.selected : undefined}>
         {name}
       </CustomText>
@@ -131,6 +155,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
+  optionRTL: { flexDirection: "row-reverse" },
   selected: { fontWeight: "700" },
   emptyText: { paddingVertical: 16 },
 });

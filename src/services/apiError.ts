@@ -1,16 +1,10 @@
 import { TranslationKey, TranslationParams } from "../shared/i18n";
 
-export type ApiErrorKey = Extract<TranslationKey, `errors.${string}`>;
-
 export interface ApiErrorInfo {
-  key: ApiErrorKey;
+  key: TranslationKey;
   params?: TranslationParams;
 }
 
-/**
- * Services describe failures with a translation key rather than a message, so
- * no user-facing English is created outside the locale files.
- */
 export class ApiError extends Error {
   readonly info: ApiErrorInfo;
 
@@ -22,5 +16,8 @@ export class ApiError extends Error {
 }
 
 export function toApiErrorInfo(error: unknown): ApiErrorInfo {
-  return error instanceof ApiError ? error.info : { key: "errors.unknown" };
+  if (error instanceof ApiError) {
+    return error.info;
+  }
+  return { key: "errors.unknown" };
 }

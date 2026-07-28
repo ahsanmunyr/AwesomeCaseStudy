@@ -4,7 +4,16 @@ import { ApiErrorInfo } from "../services/apiError";
 import { CustomLoader, CustomPressable, CustomText, CustomView } from "../shared/components";
 import { useTranslation } from "../shared/i18n";
 
-export const LoadingState = memo(() => <CustomLoader testID="loading-state" fullscreen size="large" tx="list.loading" />);
+/**
+ * The four things the list can show apart from cards: the first loading
+ * spinner, an error, an empty result, and the footer under the last card.
+ */
+
+/** Shown while the very first page is loading and the screen is still empty. */
+export const LoadingState = memo(() => {
+  const { t } = useTranslation();
+  return <CustomLoader testID="loading-state" fullscreen size="large" caption={t("list.loading")} />;
+});
 
 interface ErrorProps {
   error: ApiErrorInfo;
@@ -13,10 +22,11 @@ interface ErrorProps {
 
 export const ErrorState = memo(({ error, onRetry }: ErrorProps) => {
   const { t } = useTranslation();
+
   return (
     <CustomView testID="error-state" center style={styles.centered}>
       <CustomText variant="error">{t(error.key, error.params)}</CustomText>
-      <CustomPressable testID="retry-button" variant="primary" tx="list.retry" onPress={onRetry} />
+      <CustomPressable testID="retry-button" variant="primary" label={t("list.retry")} onPress={onRetry} />
     </CustomView>
   );
 });
@@ -28,23 +38,33 @@ interface EmptyProps {
   totalCount: number;
 }
 
-export const EmptyState = memo(({ hasMore, onLoadMore, loadedCount, totalCount }: EmptyProps) => (
-  <CustomView testID="empty-state" center style={styles.centered}>
-    <CustomText variant="subtitle" tx="list.empty" style={styles.centeredText} />
-    {hasMore && (
-      <>
-        <CustomText variant="caption" tx="list.emptyHint" style={styles.centeredText} />
-        <CustomPressable testID="empty-load-more" variant="primary" tx="list.loadMoreCards" onPress={onLoadMore} />
-        <CustomText
-          variant="caption"
-          tx="list.progress"
-          txParams={{ loaded: loadedCount, total: totalCount }}
-          style={styles.centeredText}
-        />
-      </>
-    )}
-  </CustomView>
-));
+/**
+ * Shown when no loaded card matches the filters. We can only search the pages
+ * loaded so far, so we offer to load more instead of just saying "nothing".
+ */
+export const EmptyState = memo(({ hasMore, onLoadMore, loadedCount, totalCount }: EmptyProps) => {
+  const { t } = useTranslation();
+
+  return (
+    <CustomView testID="empty-state" center style={styles.centered}>
+      <CustomText variant="subtitle" style={styles.centeredText}>
+        {t("list.empty")}
+      </CustomText>
+
+      {hasMore && (
+        <>
+          <CustomText variant="caption" style={styles.centeredText}>
+            {t("list.emptyHint")}
+          </CustomText>
+          <CustomPressable testID="empty-load-more" variant="primary" label={t("list.loadMoreCards")} onPress={onLoadMore} />
+          <CustomText variant="caption" style={styles.centeredText}>
+            {t("list.progress", { loaded: loadedCount, total: totalCount })}
+          </CustomText>
+        </>
+      )}
+    </CustomView>
+  );
+});
 
 interface FooterProps {
   isLoadingMore: boolean;
@@ -55,7 +75,10 @@ interface FooterProps {
   isFiltering: boolean;
 }
 
+/** Sits under the last card: a spinner, a "Load more" button, or a done message. */
 export const ListFooter = memo(({ isLoadingMore, hasMore, onLoadMore, loadedCount, totalCount, isFiltering }: FooterProps) => {
+  const { t } = useTranslation();
+
   if (isLoadingMore) {
     return <CustomLoader testID="footer-loading" />;
   }
@@ -63,20 +86,21 @@ export const ListFooter = memo(({ isLoadingMore, hasMore, onLoadMore, loadedCoun
   if (!hasMore) {
     return (
       <CustomView center style={styles.footer}>
-        <CustomText variant="subtitle" tx="list.allLoaded" txParams={{ total: totalCount }} style={styles.centeredText} />
+        <CustomText variant="subtitle" style={styles.centeredText}>
+          {t("list.allLoaded", { total: totalCount })}
+        </CustomText>
       </CustomView>
     );
   }
 
   return (
     <CustomView center style={styles.footer}>
-      <CustomPressable testID="load-more" variant="primary" tx="list.loadMore" onPress={onLoadMore} />
-      <CustomText
-        variant="caption"
-        tx={isFiltering ? "list.progressFiltered" : "list.progress"}
-        txParams={{ loaded: loadedCount, total: totalCount }}
-        style={styles.centeredText}
-      />
+      <CustomPressable testID="load-more" variant="primary" label={t("list.loadMore")} onPress={onLoadMore} />
+      <CustomText variant="caption" style={styles.centeredText}>
+        {isFiltering
+          ? t("list.progressFiltered", { loaded: loadedCount, total: totalCount })
+          : t("list.progress", { loaded: loadedCount, total: totalCount })}
+      </CustomText>
     </CustomView>
   );
 });

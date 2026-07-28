@@ -1,26 +1,37 @@
 import React, { memo } from "react";
 import { StyleSheet } from "react-native";
 import colors, { rarityColors } from "../theme/colors";
-import { Card } from "../../types/heartstone-api/type";
+import { CardWithId } from "../../types/heartstone-api/type";
 import { CustomText, CustomView } from "../shared/components";
-import { useTranslation } from "../shared/i18n";
+import { TranslationKey, useTranslation } from "../shared/i18n";
 
 interface Props {
-  card: Card;
+  card: CardWithId;
 }
 
 /**
- * The API exposes only `hasImage` booleans (no image URLs), so cards are
- * rendered as text rows. Card names stay in the API's language; the metadata
- * around them is localised.
+ * One row of the list.
+ *
+ * The API only tells us whether a card has an image, it gives no image URL, so
+ * a card is drawn as text. The card name stays in the API language, everything
+ * around it is translated.
  */
 const CardItem = ({ card }: Props) => {
-  const { t, tApi } = useTranslation();
+  const { t } = useTranslation();
+
   const rarityColor = rarityColors[card.rarity?.slug] ?? colors.textMuted;
 
-  const typeName = card.type ? tApi(`cardTypes.${card.type.slug}`, card.type.name) : t("card.unknownType");
-  const className = card.class ? tApi(`cardClasses.${card.class.slug}`, card.class.name) : t("card.neutralClass");
-  const rarityName = card.rarity ? tApi(`cardRarities.${card.rarity.slug}`, card.rarity.name) : t("card.noRarity");
+  // The slugs come from the API, so TypeScript cannot know these keys in
+  // advance. `defaultValue` shows the English name the server sent whenever we
+  // have no translation for a slug.
+  const apiName = (key: string, fallback: string) => t(key as TranslationKey, { defaultValue: fallback });
+
+  const typeName = card.type ? apiName(`cardTypes.${card.type.slug}`, card.type.name) : t("card.unknownType");
+  const className = card.class ? apiName(`cardClasses.${card.class.slug}`, card.class.name) : t("card.neutralClass");
+  const rarityName = card.rarity ? apiName(`cardRarities.${card.rarity.slug}`, card.rarity.name) : t("card.noRarity");
+
+  // Spells have no attack or health, so those two lines are optional.
+  const { attack, health } = card;
 
   return (
     <CustomView testID={`card-${card.slug}`} row variant="card" style={styles.container}>
@@ -47,8 +58,8 @@ const CardItem = ({ card }: Props) => {
           </CustomText>
         </CustomView>
 
-        {typeof card.attack === "number" && typeof card.health === "number" && (
-          <CustomText variant="caption" tx="card.stats" txParams={{ attack: card.attack, health: card.health }} />
+        {typeof attack === "number" && typeof health === "number" && (
+          <CustomText variant="caption">{t("card.stats", { attack, health })}</CustomText>
         )}
       </CustomView>
     </CustomView>
@@ -62,4 +73,6 @@ const styles = StyleSheet.create({
   metaRow: { gap: 5, flexWrap: "wrap" },
 });
 
+// memo means a row only re-renders when its own card changes, not when the
+// screen re-renders for something else (a new page, a filter change).
 export default memo(CardItem);

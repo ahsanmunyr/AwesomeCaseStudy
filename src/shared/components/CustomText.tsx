@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { StyleSheet, Text, TextProps, TextStyle } from "react-native";
 import colors from "../../theme/colors";
-import { TranslationKey, TranslationParams, useTranslation } from "../i18n";
+import { useIsRTL } from "../i18n";
 
 export type TextVariant =
   | "title"
@@ -18,31 +18,35 @@ export type TextVariant =
   | "buttonDanger";
 
 export interface CustomTextProps extends TextProps {
+  /** Picks the ready-made style below, so screens never invent font sizes. */
   variant?: TextVariant;
-  /** Translation key. Preferred over children so no literal ships in a screen. */
-  tx?: TranslationKey;
-  txParams?: TranslationParams;
+  /** Overrides only the colour, e.g. the rarity colour on a card. */
   color?: string;
 }
 
 /**
- * The only Text in the app. Pass `tx` for translated copy; `children` is
- * reserved for values that come from the API (card names, artist names).
+ * The only Text component used in the app. It applies one of the styles below
+ * and sets the writing direction for Arabic.
+ *
+ * Pass the text as children: <CustomText>{t("app.title")}</CustomText>
  */
-const CustomText = ({ variant = "body", tx, txParams, color, style, children, ...rest }: CustomTextProps) => {
-  const { t, isRTL } = useTranslation();
-  const content = tx ? t(tx, txParams) : children;
+const CustomText = ({ variant = "body", color, style, children, ...rest }: CustomTextProps) => {
+  const isRTL = useIsRTL();
 
+  // The direction goes first so a variant that sets its own alignment (the
+  // centred "error" text) still wins, and the caller's `style` wins over both.
   return (
-    <Text style={[variantStyles[variant], isRTL ? styles.rtl : styles.ltr, color ? { color } : undefined, style as TextStyle]} {...rest}>
-      {content}
+    <Text style={[isRTL ? styles.rtl : styles.ltr, variantStyles[variant], color ? { color } : undefined, style as TextStyle]} {...rest}>
+      {children}
     </Text>
   );
 };
 
 const styles = StyleSheet.create({
-  ltr: { writingDirection: "ltr" },
-  rtl: { writingDirection: "rtl" },
+  // textAlign matters as much as writingDirection: without it, Arabic text
+  // renders correctly but still sits against the left edge.
+  ltr: { writingDirection: "ltr", textAlign: "left" },
+  rtl: { writingDirection: "rtl", textAlign: "right" },
 });
 
 const variantStyles = StyleSheet.create({
@@ -60,4 +64,5 @@ const variantStyles = StyleSheet.create({
   buttonDanger: { fontSize: 13, fontWeight: "600", color: colors.danger },
 });
 
+// memo stops a card row from re-rendering when its props did not change.
 export default memo(CustomText);

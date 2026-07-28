@@ -1,54 +1,53 @@
 import axios, { AxiosInstance } from "axios";
-import { createAjaxInstance } from "../config/api";
-import APIS from "../config/baseURLs";
+import { createApiClient } from "../config/api";
+import API from "../config/baseURLs";
 import { ApiError } from "./apiError";
-import { HearthstoneResponse } from "../../types/heartstone-api/type";
+import { CardsPage, HearthstoneResponse } from "../../types/heartstone-api/type";
+import { withCardIds } from "./cardIdentity";
 
-export const DEFAULT_PAGE_SIZE = 12; // that value should be coming from the cms or server, we can handle it when App live
+export const DEFAULT_PAGE_SIZE = 12;
 
-export interface GetCardsParams {
-  page: number;
-  pageSize?: number;
-  signal?: AbortSignal;
-}
+let client: AxiosInstance | null = null;
 
-let ajax: AxiosInstance | null = null;
-
-function client(): AxiosInstance {
-  if (!ajax) {
-    ajax = createAjaxInstance();
+function getClient(): AxiosInstance {
+  if (!client) {
+    client = createApiClient();
   }
-  return ajax;
+  return client;
 }
 
-function toRequestError(error: unknown): ApiError {
-  if (axios.isAxiosError(error)) {
-    const status = error.response?.status;
-    if (status === 429) {
-      return new ApiError({ key: "errors.rateLimit" });
-    }
-    if (status === 401 || status === 403) {
-      return new ApiError({ key: "errors.invalidKey" });
-    }
-    if (status) {
-      return new ApiError({ key: "errors.http", params: { status } });
-    }
-    return new ApiError({ key: "errors.network" });
+function toApiError(error: unknown): ApiError {
+  if (!axios.isAxiosError(error)) {
+    return new ApiError({ key: "errors.unknown" });
   }
-  return new ApiError({ key: "errors.unknown" });
+
+  const status = error.response?.status;
+
+  if (status === 429) {
+    return new ApiError({ key: "errors.rateLimit" });
+  }
+  if (status === 401 || status === 403) {
+    return new ApiError({ key: "errors.invalidKey" });
+  }
+  if (status) {
+    return new ApiError({ key: "errors.http", params: { status } });
+  }
+
+  return new ApiError({ key: "errors.network" });
 }
 
-export async function getCards({ page, pageSize = DEFAULT_PAGE_SIZE, signal }: GetCardsParams): Promise<HearthstoneResponse> {
+/**
+ * Loads one page of cards and gives each of them an id before handing them on.
+ * Throws an ApiError when the request fails.
+ */
+export async function getCards(page: number, pageSize: number = DEFAULT_PAGE_SIZE): Promise<CardsPage> {
   try {
-    const { data } = await client().get<HearthstoneResponse>(APIS.CARDS, {
+    const response = await getClient().get<HearthstoneResponse>(API.CARDS, {
       params: { page, pageSize },
-      signal,
     });
-    console.log(data, "------------------");
-    return data;
+
+    return { ...response.data, cards: withCardIds(response.data.cards ?? []) };
   } catch (error) {
-    throw toRequestError(error);
+    throw toApiError(error);
   }
 }
-
-export default { getCards };

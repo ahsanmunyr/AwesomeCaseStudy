@@ -1,58 +1,50 @@
 import { act, renderHook } from "@testing-library/react-native";
-import { useDebounce } from "../../src/screens/MainScreen/hooks/useDebounce";
+import { useDebounce } from "../../src/hooks/useDebounce";
 
-beforeEach(() => jest.useFakeTimers());
-afterEach(() => jest.useRealTimers());
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe("useDebounce", () => {
-  it("returns the initial value immediately", async () => {
+  it("returns the first value straight away", async () => {
     const { result } = await renderHook(() => useDebounce("fire", 300));
+
     expect(result.current).toBe("fire");
   });
 
-  it("does not update before the delay elapses", async () => {
+  it("waits for the delay before returning a new value", async () => {
     const { result, rerender } = await renderHook<string, { value: string }>(({ value }) => useDebounce(value, 300), {
-      initialProps: { value: "a" },
+      initialProps: { value: "fire" },
     });
 
-    await rerender({ value: "ab" });
-    await act(async () => {
-      jest.advanceTimersByTime(299);
-    });
-
-    expect(result.current).toBe("a");
-  });
-
-  it("updates once the delay elapses", async () => {
-    const { result, rerender } = await renderHook<string, { value: string }>(({ value }) => useDebounce(value, 300), {
-      initialProps: { value: "a" },
-    });
-
-    await rerender({ value: "ab" });
-    await act(async () => {
-      jest.advanceTimersByTime(300);
-    });
-
-    expect(result.current).toBe("ab");
-  });
-
-  it("only emits the final value across rapid changes", async () => {
-    const { result, rerender } = await renderHook<string, { value: string }>(({ value }) => useDebounce(value, 300), {
-      initialProps: { value: "" },
-    });
-
-    for (const value of ["f", "fi", "fir", "fire"]) {
-      await rerender({ value });
-      await act(async () => {
-        jest.advanceTimersByTime(100);
-      });
-    }
-
-    expect(result.current).toBe("");
+    await rerender({ value: "fireball" });
+    expect(result.current).toBe("fire");
 
     await act(async () => {
       jest.advanceTimersByTime(300);
     });
-    expect(result.current).toBe("fire");
+    expect(result.current).toBe("fireball");
+  });
+
+  it("only returns the last value when the user keeps typing", async () => {
+    const { result, rerender } = await renderHook<string, { value: string }>(({ value }) => useDebounce(value, 300), {
+      initialProps: { value: "f" },
+    });
+
+    await rerender({ value: "fi" });
+    await act(async () => {
+      jest.advanceTimersByTime(200);
+    });
+
+    await rerender({ value: "fir" });
+    await act(async () => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(result.current).toBe("fir");
   });
 });

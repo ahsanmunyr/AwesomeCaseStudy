@@ -1,11 +1,10 @@
-import { StyleSheet, TextStyle, ViewStyle } from "react-native";
+import { StyleSheet, ViewStyle } from "react-native";
 import colors from "../../theme/colors";
 
 interface Style {
   container: ViewStyle;
   header: ViewStyle;
-  title: TextStyle;
-  subtitle: TextStyle;
+  headerTexts: ViewStyle;
   listContent: ViewStyle;
 }
 
@@ -19,16 +18,12 @@ export default () =>
       paddingHorizontal: 16,
       paddingTop: 12,
       paddingBottom: 10,
+      gap: 12,
+    },
+    // Takes the space left over so the language button sits at the far edge.
+    headerTexts: {
+      flex: 1,
       gap: 2,
-    },
-    title: {
-      fontSize: 22,
-      fontWeight: "800",
-      color: colors.text,
-    },
-    subtitle: {
-      fontSize: 13,
-      color: colors.textMuted,
     },
     listContent: {
       paddingHorizontal: 16,

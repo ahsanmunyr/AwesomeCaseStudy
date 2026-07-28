@@ -1,30 +1,50 @@
-import { Card, HearthstoneResponse } from "../../types/heartstone-api/type";
+import { Card, CardSet, CardWithId, CardsPage, HearthstoneResponse } from "../../types/heartstone-api/type";
+import { cardIdentity } from "../../src/services/cardIdentity";
 
-interface Overrides {
+/** The parts of a card a test may want to change. */
+interface CardOverrides {
   slug?: string;
   name?: string;
-  cardSetSlug?: string | null;
-  copyOfCardId?: number;
   type?: { slug: string; name: string };
   cardClass?: { slug: string; name: string };
   rarity?: { slug: string; name: string };
   manaCost?: number;
   attack?: number;
   health?: number;
+  cardSetSlug?: string;
+  copyOfCardId?: number;
 }
 
-export function makeCard(overrides: Overrides = {}): Card {
-  const slug = overrides.slug ?? "fireball";
+function makeCardSet(slug?: string): CardSet | null {
+  if (!slug) {
+    return null;
+  }
+  return {
+    name: slug,
+    slug,
+    type: "expansion",
+    collectibleCount: 0,
+    collectibleRevealedCount: 0,
+    nonCollectibleCount: 0,
+    nonCollectibleRevealedCount: 0,
+  };
+}
+
+/**
+ * A card exactly as the API sends it, with no id. Only the service test needs
+ * this shape; everywhere else the service has already added the id.
+ */
+export function makeCard(overrides: CardOverrides = {}): Card {
   const type = overrides.type ?? { slug: "spell", name: "Spell" };
   const cardClass = overrides.cardClass ?? { slug: "mage", name: "Mage" };
   const rarity = overrides.rarity ?? { slug: "common", name: "Common" };
 
   return {
     collectible: 1,
-    slug,
+    slug: overrides.slug ?? "fireball",
+    name: overrides.name ?? "Fireball",
     artistName: "Test Artist",
     manaCost: overrides.manaCost ?? 4,
-    name: overrides.name ?? "Fireball",
     text: "Deal 6 damage.",
     flavorText: "This spell is useful for burning things.",
     hasImage: true,
@@ -34,26 +54,21 @@ export function makeCard(overrides: Overrides = {}): Card {
     rarity: { ...rarity, craftingCost: [40, 400], dustValue: [5, 50] },
     class: cardClass,
     type: { ...type, gameModes: [] },
-    cardSet:
-      overrides.cardSetSlug == null
-        ? null
-        : {
-            name: overrides.cardSetSlug,
-            slug: overrides.cardSetSlug,
-            type: "expansion",
-            collectibleCount: 0,
-            collectibleRevealedCount: 0,
-            nonCollectibleCount: 0,
-            nonCollectibleRevealedCount: 0,
-          },
+    cardSet: makeCardSet(overrides.cardSetSlug),
     spellSchool: null,
-    ...(overrides.copyOfCardId !== undefined ? { copyOfCardId: overrides.copyOfCardId } : {}),
-    ...(overrides.attack !== undefined ? { attack: overrides.attack } : {}),
-    ...(overrides.health !== undefined ? { health: overrides.health } : {}),
+    attack: overrides.attack,
+    health: overrides.health,
+    copyOfCardId: overrides.copyOfCardId,
   };
 }
 
-export const MINION = makeCard({
+/** The same card after the service has given it an id. */
+export function makeCardWithId(overrides: CardOverrides = {}): CardWithId {
+  const card = makeCard(overrides);
+  return { ...card, id: cardIdentity(card) };
+}
+
+export const MINION = makeCardWithId({
   slug: "chillwind-yeti",
   name: "Chillwind Yeti",
   type: { slug: "minion", name: "Minion" },
@@ -64,48 +79,11 @@ export const MINION = makeCard({
   health: 5,
 });
 
-export const SPELL = makeCard({
-  slug: "fireball",
-  name: "Fireball",
-  type: { slug: "spell", name: "Spell" },
-  cardClass: { slug: "mage", name: "Mage" },
-  rarity: { slug: "common", name: "Common" },
-});
-
-export const WEAPON = makeCard({
-  slug: "fiery-war-axe",
-  name: "Fiery War Axe",
-  type: { slug: "weapon", name: "Weapon" },
-  cardClass: { slug: "warrior", name: "Warrior" },
-  rarity: { slug: "epic", name: "Epic" },
-});
-
-export const LEGENDARY_MINION = makeCard({
-  slug: "ragnaros",
-  name: "Ragnaros the Firelord",
-  type: { slug: "minion", name: "Minion" },
-  cardClass: { slug: "neutral", name: "Neutral" },
-  rarity: { slug: "legendary", name: "Legendary" },
-  manaCost: 8,
-  attack: 8,
-  health: 8,
-});
-
-export function makeResponse(cards: Card[], overrides: Partial<HearthstoneResponse> = {}): HearthstoneResponse {
-  return {
-    cards,
-    cardCount: 4305,
-    pageCount: 359,
-    page: "1",
-    ...overrides,
-  };
-}
-
 /**
- * Same slug and name as MINION but a different printing - the API really does
- * return these as separate cards (Abusive Sergeant ships as both 1/1 and 2/1).
+ * The same card as MINION, but printed again in another set with one more
+ * attack. Used to prove the two get different ids.
  */
-export const MINION_REPRINT = makeCard({
+export const MINION_REPRINT = makeCardWithId({
   slug: "chillwind-yeti",
   name: "Chillwind Yeti",
   type: { slug: "minion", name: "Minion" },
@@ -117,3 +95,55 @@ export const MINION_REPRINT = makeCard({
   cardSetSlug: "core",
   copyOfCardId: 242,
 });
+
+export const SPELL = makeCardWithId({
+  slug: "fireball",
+  name: "Fireball",
+  type: { slug: "spell", name: "Spell" },
+  cardClass: { slug: "mage", name: "Mage" },
+  rarity: { slug: "common", name: "Common" },
+});
+
+export const WEAPON = makeCardWithId({
+  slug: "fiery-war-axe",
+  name: "Fiery War Axe",
+  type: { slug: "weapon", name: "Weapon" },
+  cardClass: { slug: "warrior", name: "Warrior" },
+  rarity: { slug: "epic", name: "Epic" },
+});
+
+export const LEGENDARY_MINION = makeCardWithId({
+  slug: "ragnaros",
+  name: "Ragnaros the Firelord",
+  type: { slug: "minion", name: "Minion" },
+  cardClass: { slug: "neutral", name: "Neutral" },
+  rarity: { slug: "legendary", name: "Legendary" },
+  manaCost: 8,
+  attack: 8,
+  health: 8,
+});
+
+/**
+ * One page as the app sees it, i.e. after the service added the ids.
+ * 4305 cards over 359 pages, like the real API.
+ */
+export function makeResponse(cards: CardWithId[], overrides: Partial<CardsPage> = {}): CardsPage {
+  return {
+    cards,
+    cardCount: 4305,
+    pageCount: 359,
+    page: "1",
+    ...overrides,
+  };
+}
+
+/** One page exactly as the API sends it, with no ids. For the service test. */
+export function makeRawResponse(cards: Card[], overrides: Partial<HearthstoneResponse> = {}): HearthstoneResponse {
+  return {
+    cards,
+    cardCount: 4305,
+    pageCount: 359,
+    page: "1",
+    ...overrides,
+  };
+}

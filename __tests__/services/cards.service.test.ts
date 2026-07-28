@@ -1,8 +1,9 @@
 import { AxiosError } from "axios";
-import { MINION, SPELL, makeResponse } from "../fixtures/cards";
+import { makeCard, makeRawResponse } from "../fixtures/cards";
 
 const mockGet = jest.fn();
 
+// Replace axios so no real request leaves the test.
 jest.mock("axios", () => {
   const actual = jest.requireActual("axios");
   return {
@@ -18,16 +19,22 @@ jest.mock("axios", () => {
 import axios from "axios";
 import { DEFAULT_PAGE_SIZE, getCards } from "../../src/services/cards.service";
 import { ApiError } from "../../src/services/apiError";
+import { cardIdentity } from "../../src/services/cardIdentity";
 
-function axiosErrorWithStatus(status: number): AxiosError {
+/** A card exactly as the API sends it: no id yet. */
+const RAW_SPELL = makeCard({ slug: "fireball", name: "Fireball" });
+
+/** Builds the kind of error axios throws when the server answers with a status. */
+function httpError(status: number): AxiosError {
   const error = new Error("Request failed") as AxiosError;
   error.isAxiosError = true;
   error.toJSON = () => ({});
-  // @ts-expect-error partial response is enough for the code under test
+  // @ts-expect-error a status is all the code under test reads
   error.response = { status };
   return error;
 }
 
+/** Builds the kind of error axios throws when the request never arrives. */
 function networkError(): AxiosError {
   const error = new Error("Network Error") as AxiosError;
   error.isAxiosError = true;
@@ -35,15 +42,24 @@ function networkError(): AxiosError {
   return error;
 }
 
+/** Calls getCards and returns the error info it throws. */
+async function errorInfoFrom(): Promise<ApiError["info"]> {
+  try {
+    await getCards(1);
+  } catch (error) {
+    return (error as ApiError).info;
+  }
+  throw new Error("expected getCards to fail");
+}
+
 beforeEach(() => {
   mockGet.mockReset();
 });
 
-describe("createAjaxInstance wiring", () => {
-  it("configures the shared instance with RapidAPI credentials", async () => {
-    mockGet.mockResolvedValue({ data: makeResponse([SPELL]) });
-
-    await getCards({ page: 1 });
+describe("the axios client", () => {
+  it("is built with the RapidAPI address and key", async () => {
+    mockGet.mockResolvedValue({ data: makeRawResponse([RAW_SPELL]) });
+    await getCards(1);
 
     expect(axios.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -58,84 +74,77 @@ describe("createAjaxInstance wiring", () => {
 });
 
 describe("getCards", () => {
-  it("requests the given page with the default page size of 12", async () => {
-    mockGet.mockResolvedValue({ data: makeResponse([SPELL]) });
+  it("asks for the given page, 12 cards at a time", async () => {
+    mockGet.mockResolvedValue({ data: makeRawResponse([RAW_SPELL]) });
 
-    await getCards({ page: 3 });
+    await getCards(3);
 
     expect(DEFAULT_PAGE_SIZE).toBe(12);
-    expect(mockGet).toHaveBeenCalledWith("/cards", expect.objectContaining({ params: { page: 3, pageSize: 12 } }));
+    expect(mockGet).toHaveBeenCalledWith("/cards", { params: { page: 3, pageSize: 12 } });
   });
 
-  it("honours an explicit page size", async () => {
-    mockGet.mockResolvedValue({ data: makeResponse([SPELL]) });
+  it("accepts another page size", async () => {
+    mockGet.mockResolvedValue({ data: makeRawResponse([RAW_SPELL]) });
 
-    await getCards({ page: 1, pageSize: 50 });
+    await getCards(1, 50);
 
-    expect(mockGet).toHaveBeenCalledWith("/cards", expect.objectContaining({ params: { page: 1, pageSize: 50 } }));
+    expect(mockGet).toHaveBeenCalledWith("/cards", { params: { page: 1, pageSize: 50 } });
   });
 
-  it("forwards the abort signal", async () => {
-    mockGet.mockResolvedValue({ data: makeResponse([SPELL]) });
-    const controller = new AbortController();
+  it("returns the counts from the answer", async () => {
+    mockGet.mockResolvedValue({ data: makeRawResponse([RAW_SPELL], { cardCount: 4305, pageCount: 359 }) });
 
-    await getCards({ page: 1, signal: controller.signal });
+    const page = await getCards(1);
 
-    expect(mockGet).toHaveBeenCalledWith("/cards", expect.objectContaining({ signal: controller.signal }));
+    expect(page.cardCount).toBe(4305);
+    expect(page.pageCount).toBe(359);
   });
 
-  it("returns the parsed response body", async () => {
-    const response = makeResponse([SPELL, MINION]);
-    mockGet.mockResolvedValue({ data: response });
+  it("gives every card an id, because the API sends none", async () => {
+    mockGet.mockResolvedValue({ data: makeRawResponse([RAW_SPELL]) });
 
-    await expect(getCards({ page: 1 })).resolves.toEqual(response);
+    const page = await getCards(1);
+
+    expect(RAW_SPELL).not.toHaveProperty("id");
+    expect(page.cards[0].id).toBe(cardIdentity(RAW_SPELL));
+    expect(page.cards[0].name).toBe("Fireball");
   });
 
-  async function infoFor(page = 1) {
-    try {
-      await getCards({ page });
-    } catch (error) {
-      expect(error).toBeInstanceOf(ApiError);
-      return (error as ApiError).info;
-    }
-    throw new Error("expected getCards to reject");
-  }
+  it("copes with an answer that has no cards array", async () => {
+    mockGet.mockResolvedValue({ data: { cardCount: 0, pageCount: 0, page: "1" } });
 
-  it("maps a 429 to the rate-limit key", async () => {
-    mockGet.mockRejectedValue(axiosErrorWithStatus(429));
-
-    await expect(infoFor()).resolves.toEqual({ key: "errors.rateLimit" });
+    await expect(getCards(1)).resolves.toMatchObject({ cards: [] });
   });
 
-  it("maps 401 and 403 to the invalid-key key", async () => {
-    mockGet.mockRejectedValue(axiosErrorWithStatus(401));
-    await expect(infoFor()).resolves.toEqual({ key: "errors.invalidKey" });
+  it("turns 429 into the rate-limit message", async () => {
+    mockGet.mockRejectedValue(httpError(429));
 
-    mockGet.mockRejectedValue(axiosErrorWithStatus(403));
-    await expect(infoFor()).resolves.toEqual({ key: "errors.invalidKey" });
+    await expect(errorInfoFrom()).resolves.toEqual({ key: "errors.rateLimit" });
   });
 
-  it("maps other HTTP errors to the http key with the status as a param", async () => {
-    mockGet.mockRejectedValue(axiosErrorWithStatus(500));
+  it("turns 401 and 403 into the invalid-key message", async () => {
+    mockGet.mockRejectedValue(httpError(401));
+    await expect(errorInfoFrom()).resolves.toEqual({ key: "errors.invalidKey" });
 
-    await expect(infoFor()).resolves.toEqual({ key: "errors.http", params: { status: 500 } });
+    mockGet.mockRejectedValue(httpError(403));
+    await expect(errorInfoFrom()).resolves.toEqual({ key: "errors.invalidKey" });
   });
 
-  it("maps a transport failure to the network key", async () => {
+  it("keeps the status number for any other HTTP error", async () => {
+    mockGet.mockRejectedValue(httpError(500));
+
+    await expect(errorInfoFrom()).resolves.toEqual({ key: "errors.http", params: { status: 500 } });
+  });
+
+  it("turns a failed connection into the network message", async () => {
     mockGet.mockRejectedValue(networkError());
 
-    await expect(infoFor()).resolves.toEqual({ key: "errors.network" });
+    await expect(errorInfoFrom()).resolves.toEqual({ key: "errors.network" });
   });
 
-  it("maps non-axios errors to the unknown key", async () => {
+  it("turns anything else into the unknown message", async () => {
     mockGet.mockRejectedValue(new Error("boom"));
 
-    await expect(infoFor()).resolves.toEqual({ key: "errors.unknown" });
-  });
-
-  it("never leaks a user-facing English message out of the service", async () => {
-    mockGet.mockRejectedValue(axiosErrorWithStatus(429));
-    const info = await infoFor();
-    expect(info.key.startsWith("errors.")).toBe(true);
+    await expect(errorInfoFrom()).resolves.toEqual({ key: "errors.unknown" });
   });
 });
