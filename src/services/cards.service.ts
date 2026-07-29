@@ -21,6 +21,7 @@ function toApiError(error: unknown): ApiError {
     return new ApiError({ key: "errors.unknown" });
   }
 
+  // these errors are all handled in the same way, so we don't need to distinguish between them, we can handle these messages from any cms side
   const status = error.response?.status;
 
   if (status === 429) {
@@ -36,10 +37,6 @@ function toApiError(error: unknown): ApiError {
   return new ApiError({ key: "errors.network" });
 }
 
-/**
- * Loads one page of cards and gives each of them an id before handing them on.
- * Throws an ApiError when the request fails.
- */
 export async function getCards(page: number, pageSize: number = DEFAULT_PAGE_SIZE): Promise<CardsPage> {
   try {
     const response = await getClient().get<HearthstoneResponse>(API.CARDS, {

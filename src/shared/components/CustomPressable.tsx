@@ -8,14 +8,11 @@ export type PressableVariant = "primary" | "pill" | "pillActive" | "danger" | "p
 
 export interface CustomPressableProps extends Omit<PressableProps, "children" | "style"> {
   variant?: PressableVariant;
-  /** Button text. Already translated by the caller. */
   label?: string;
-  /** Use instead of label when the button needs custom content. */
   children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }
 
-/** Which text style goes with which button style. */
 const textVariantFor = {
   primary: "buttonPrimary",
   pill: "buttonPill",
@@ -24,19 +21,9 @@ const textVariantFor = {
   plain: "body",
 } as const;
 
-/**
- * The only button of the app. Pass `label` for a normal text button, or
- * `children` when the button holds something else (an icon, a row of text).
- */
 const CustomPressable = ({ variant = "primary", label, children, style, ...rest }: CustomPressableProps) => {
-  // Only the pill variants lay their children out in a row, so only they need
-  // mirroring. The "plain" variant is also used as a full-screen backdrop and
-  // as a column, and reversing those would break the layout.
   const isRTL = useIsRTL();
   const mirrorRow = isRTL && (variant === "pill" || variant === "pillActive");
-
-  // Pressable wants a function so it can restyle while the finger is down.
-  // useCallback keeps that function stable between renders.
   const buildStyle = useCallback(
     ({ pressed }: { pressed: boolean }) => [variantStyles[variant], mirrorRow && styles.rowReverse, pressed && styles.pressed, style],
     [variant, mirrorRow, style],
@@ -57,7 +44,6 @@ const CustomPressable = ({ variant = "primary", label, children, style, ...rest 
 
 const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
-  // Puts the dropdown caret on the left of its label in Arabic.
   rowReverse: { flexDirection: "row-reverse" },
 });
 

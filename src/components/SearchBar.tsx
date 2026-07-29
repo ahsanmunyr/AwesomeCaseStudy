@@ -9,7 +9,6 @@ interface Props {
   onChange: (value: string) => void;
 }
 
-/** Search box with a small ✕ button that appears once something is typed. */
 const SearchBar = ({ value, onChange }: Props) => {
   const { t } = useTranslation();
 
@@ -52,8 +51,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   input: { flex: 1 },
-  // No side-specific padding here: the row itself flips in Arabic, so a gap on
-  // the container keeps the spacing right in both directions.
   clear: {},
 });
 

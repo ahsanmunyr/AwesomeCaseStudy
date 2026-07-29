@@ -7,7 +7,6 @@ export type ViewVariant = "transparent" | "screen" | "surface" | "card";
 
 export interface CustomViewProps extends ViewProps {
   variant?: ViewVariant;
-  /** Lays children out horizontally, right to left when the language is Arabic. */
   row?: boolean;
   center?: boolean;
   flex?: boolean;
@@ -15,10 +14,6 @@ export interface CustomViewProps extends ViewProps {
 
 const CustomView = ({ variant = "transparent", row, center, flex, style, children, ...rest }: CustomViewProps) => {
   const isRTL = useIsRTL();
-
-  // "row-reverse" is what mirrors the layout the moment the language changes.
-  // Plain "row" would only mirror after an app restart, because React Native
-  // reads I18nManager.isRTL, and that flag is only applied on the next launch.
   const rowStyle = isRTL ? styles.rowReverse : styles.row;
 
   return (

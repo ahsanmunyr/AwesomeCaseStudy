@@ -80,7 +80,6 @@ const MainScreen = () => {
       return <ErrorState error={error} onRetry={retry} />;
     }
 
-    console.log(cards, "cards---------->");
     return (
       <FlashList
         testID="cards-list"

@@ -5,10 +5,6 @@ import { useTranslation } from "../i18n";
 
 export type CustomTextInputProps = TextInputProps;
 
-/**
- * A TextInput with the app colours already applied. It also flips the text
- * alignment when the language is Arabic.
- */
 const CustomTextInput = ({ style, ...rest }: CustomTextInputProps) => {
   const { i18n } = useTranslation();
   const isRTL = i18n.dir() === "rtl";

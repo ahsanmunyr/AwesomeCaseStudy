@@ -20,7 +20,6 @@ export default () =>
       paddingBottom: 10,
       gap: 12,
     },
-    // Takes the space left over so the language button sits at the far edge.
     headerTexts: {
       flex: 1,
       gap: 2,

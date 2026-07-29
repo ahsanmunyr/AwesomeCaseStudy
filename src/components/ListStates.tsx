@@ -38,10 +38,6 @@ interface EmptyProps {
   totalCount: number;
 }
 
-/**
- * Shown when no loaded card matches the filters. We can only search the pages
- * loaded so far, so we offer to load more instead of just saying "nothing".
- */
 export const EmptyState = memo(({ hasMore, onLoadMore, loadedCount, totalCount }: EmptyProps) => {
   const { t } = useTranslation();
 

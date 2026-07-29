@@ -1,4 +1,3 @@
-/** One page exactly as the API sends it. Only the service sees this shape. */
 export interface HearthstoneResponse {
   cards: Card[];
   cardCount: number;
@@ -6,18 +5,10 @@ export interface HearthstoneResponse {
   page: string;
 }
 
-/**
- * A card after the service has added our own `id`.
- *
- * The API sends no id field, so the service builds one for every card it
- * receives. Everything outside the service works with this type, which means
- * the rest of the app can just use `card.id` and never think about it again.
- */
 export interface CardWithId extends Card {
   id: string;
 }
 
-/** One page of cards, after the service has added the ids. */
 export interface CardsPage {
   cards: CardWithId[];
   cardCount: number;
