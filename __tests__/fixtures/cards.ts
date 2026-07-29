@@ -1,5 +1,4 @@
 import { Card, CardSet, CardWithId, CardsPage, HearthstoneResponse } from "../../types/heartstone-api/type";
-import { cardIdentity } from "../../src/services/cardIdentity";
 
 /** The parts of a card a test may want to change. */
 interface CardOverrides {
@@ -62,10 +61,12 @@ export function makeCard(overrides: CardOverrides = {}): Card {
   };
 }
 
-/** The same card after the service has given it an id. */
-export function makeCardWithId(overrides: CardOverrides = {}): CardWithId {
-  const card = makeCard(overrides);
-  return { ...card, id: cardIdentity(card) };
+/**
+ * The same card after the service has given it an id. The id is the card's
+ * position in the loaded list, so fixtures used together need different ones.
+ */
+export function makeCardWithId(overrides: CardOverrides = {}, id: string = "0"): CardWithId {
+  return { ...makeCard(overrides), id };
 }
 
 export const MINION = makeCardWithId({
@@ -79,49 +80,42 @@ export const MINION = makeCardWithId({
   health: 5,
 });
 
-/**
- * The same card as MINION, but printed again in another set with one more
- * attack. Used to prove the two get different ids.
- */
-export const MINION_REPRINT = makeCardWithId({
-  slug: "chillwind-yeti",
-  name: "Chillwind Yeti",
-  type: { slug: "minion", name: "Minion" },
-  cardClass: { slug: "neutral", name: "Neutral" },
-  rarity: { slug: "common", name: "Common" },
-  manaCost: 4,
-  attack: 5,
-  health: 5,
-  cardSetSlug: "core",
-  copyOfCardId: 242,
-});
+export const SPELL = makeCardWithId(
+  {
+    slug: "fireball",
+    name: "Fireball",
+    type: { slug: "spell", name: "Spell" },
+    cardClass: { slug: "mage", name: "Mage" },
+    rarity: { slug: "common", name: "Common" },
+  },
+  "1",
+);
 
-export const SPELL = makeCardWithId({
-  slug: "fireball",
-  name: "Fireball",
-  type: { slug: "spell", name: "Spell" },
-  cardClass: { slug: "mage", name: "Mage" },
-  rarity: { slug: "common", name: "Common" },
-});
+export const LEGENDARY_MINION = makeCardWithId(
+  {
+    slug: "ragnaros",
+    name: "Ragnaros the Firelord",
+    type: { slug: "minion", name: "Minion" },
+    cardClass: { slug: "neutral", name: "Neutral" },
+    rarity: { slug: "legendary", name: "Legendary" },
+    manaCost: 8,
+    attack: 8,
+    health: 8,
+  },
+  "2",
+);
 
-export const WEAPON = makeCardWithId({
-  slug: "fiery-war-axe",
-  name: "Fiery War Axe",
-  type: { slug: "weapon", name: "Weapon" },
-  cardClass: { slug: "warrior", name: "Warrior" },
-  rarity: { slug: "epic", name: "Epic" },
-});
-
-export const LEGENDARY_MINION = makeCardWithId({
-  slug: "ragnaros",
-  name: "Ragnaros the Firelord",
-  type: { slug: "minion", name: "Minion" },
-  cardClass: { slug: "neutral", name: "Neutral" },
-  rarity: { slug: "legendary", name: "Legendary" },
-  manaCost: 8,
-  attack: 8,
-  health: 8,
-});
+/** Sits on the second page in the tests, hence the id after LEGENDARY_MINION. */
+export const WEAPON = makeCardWithId(
+  {
+    slug: "fiery-war-axe",
+    name: "Fiery War Axe",
+    type: { slug: "weapon", name: "Weapon" },
+    cardClass: { slug: "warrior", name: "Warrior" },
+    rarity: { slug: "epic", name: "Epic" },
+  },
+  "3",
+);
 
 /**
  * One page as the app sees it, i.e. after the service added the ids.

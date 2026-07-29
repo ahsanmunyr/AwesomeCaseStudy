@@ -21,7 +21,6 @@ interface Props {
   activeFilterCount: number;
 }
 
-/** The search box plus the three dropdowns, in a row that scrolls sideways. */
 const FilterBar = ({
   search,
   onSearchChange,
@@ -95,10 +94,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  // Explicit left/right rather than start/end: those two are resolved from
-  // I18nManager, which only updates after an app restart.
-  row: { flexDirection: "row", gap: 8, alignItems: "center", flexGrow: 1, paddingRight: 16 },
-  rowRTL: { flexDirection: "row-reverse", paddingRight: 0, paddingLeft: 16 },
+
+  row: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+    flexGrow: 1,
+    paddingRight: 16,
+  },
+  rowRTL: {
+    flexDirection: "row-reverse",
+    paddingRight: 0,
+    paddingLeft: 16,
+  },
 });
 
 export default memo(FilterBar);

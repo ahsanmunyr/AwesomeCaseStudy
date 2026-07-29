@@ -11,6 +11,7 @@ export interface CustomPressableProps extends Omit<PressableProps, "children" | 
   label?: string;
   children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  disabled?: boolean;
 }
 
 const textVariantFor = {
@@ -21,7 +22,7 @@ const textVariantFor = {
   plain: "body",
 } as const;
 
-const CustomPressable = ({ variant = "primary", label, children, style, ...rest }: CustomPressableProps) => {
+const CustomPressable = ({ variant = "primary", label, children, style, disabled = false, ...rest }: CustomPressableProps) => {
   const isRTL = useIsRTL();
   const mirrorRow = isRTL && (variant === "pill" || variant === "pillActive");
   const buildStyle = useCallback(
@@ -30,7 +31,7 @@ const CustomPressable = ({ variant = "primary", label, children, style, ...rest 
   );
 
   return (
-    <Pressable accessibilityRole="button" style={buildStyle} {...rest}>
+    <Pressable disabled={disabled} accessibilityRole="button" style={buildStyle} {...rest}>
       {label !== undefined ? (
         <CustomText variant={textVariantFor[variant]} numberOfLines={1}>
           {label}

@@ -1,4 +1,5 @@
 import { CardWithId } from "../../../../types/heartstone-api/type";
+import { CLASS_ICONS } from "../../../config/baseURLs";
 
 export interface FilterOption {
   slug: string;
@@ -78,3 +79,24 @@ export function filterCards(cards: CardWithId[], filters: ActiveFilters): CardWi
 export function countActiveFilters(filters: ActiveFilters): number {
   return [filters.type, filters.cardClass, filters.rarity].filter(Boolean).length;
 }
+
+/** Card text arrives with markup in it, e.g. "<b>Battlecry:</b> Deal 2 damage.\n". */
+export const cleanCardText = (text?: string): string => {
+  if (!text) {
+    return "";
+  }
+  return text
+    .replace(/<[^>]*>?/gm, "")
+    .replace(/\\n/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+export const getClassIconUrl = (className?: string): string => {
+  if (!className) return CLASS_ICONS["Neutral"];
+
+  // Format string to match keys (e.g., "DEMON HUNTER" -> "Demon Hunter")
+  const key = Object.keys(CLASS_ICONS).find(k => k.toLowerCase() === className.trim().toLowerCase());
+
+  return key ? CLASS_ICONS[key] : CLASS_ICONS["Neutral"];
+};

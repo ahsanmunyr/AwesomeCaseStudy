@@ -6,27 +6,15 @@ import { CustomPressable, CustomText } from "../shared/components";
 import { TranslationKey, useIsRTL, useTranslation } from "../shared/i18n";
 
 interface Props {
-  /** The name of the filter, already translated, e.g. "Type". */
   label: string;
-  /** Where to look for translations of this filter's slugs, e.g. "cardTypes". */
   namespace: string;
   options: FilterOption[];
-  /** The chosen slug, or null for "All". */
   value: string | null;
   onChange: (slug: string | null) => void;
   testID?: string;
 }
 
-/** The slug we give the "All" row. It is not a real card value. */
 const ALL_SLUG = "__all__";
-
-/**
- * A pill button that opens a bottom sheet of choices.
- *
- * Tapping the dark background closes the sheet, so the sheet itself needs an
- * onPress that does nothing - otherwise the tap would go through to the
- * background and close the sheet while the user is choosing.
- */
 const FilterDropdown = ({ label, namespace, options, value, onChange, testID }: Props) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -42,9 +30,6 @@ const FilterDropdown = ({ label, namespace, options, value, onChange, testID }: 
     [onChange],
   );
 
-  // Translate the option names once per list, not on every render. The slugs
-  // come from the API, so `defaultValue` shows the English name the server sent
-  // whenever we have no translation for one.
   const translatedOptions = useMemo(
     () =>
       options.map(option => ({
@@ -105,7 +90,6 @@ const FilterDropdown = ({ label, namespace, options, value, onChange, testID }: 
   );
 };
 
-/** Keeps a tap inside the sheet from reaching the background behind it. */
 function doNothing() {}
 
 interface OptionProps {
@@ -115,7 +99,6 @@ interface OptionProps {
   onSelect: (slug: string) => void;
 }
 
-/** One row inside the open sheet. */
 const Option = memo(({ slug, name, isSelected, onSelect }: OptionProps) => {
   const isRTL = useIsRTL();
   const handlePress = useCallback(() => onSelect(slug), [onSelect, slug]);

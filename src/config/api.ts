@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from "axios";
 import Config from "react-native-config";
-import API from "./baseURLs";
+import { API } from "./baseURLs";
 
 // Give up on a request after 15 seconds. should be coming from cms
 export const REQUEST_TIMEOUT_MS = 15000;

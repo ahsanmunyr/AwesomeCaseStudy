@@ -1,11 +1,10 @@
 import axios, { AxiosInstance } from "axios";
 import { createApiClient } from "../config/api";
-import API from "../config/baseURLs";
+import { API } from "../config/baseURLs";
 import { ApiError } from "./apiError";
 import { CardsPage, HearthstoneResponse } from "../../types/heartstone-api/type";
-import { withCardIds } from "./cardIdentity";
 
-export const DEFAULT_PAGE_SIZE = 12;
+export const DEFAULT_PAGE_SIZE = 12; // we can make this bigger if we want to reduce the number of requests, but it will increase the time to first render
 
 let client: AxiosInstance | null = null;
 
@@ -42,8 +41,9 @@ export async function getCards(page: number, pageSize: number = DEFAULT_PAGE_SIZ
     const response = await getClient().get<HearthstoneResponse>(API.CARDS, {
       params: { page, pageSize },
     });
-
-    return { ...response.data, cards: withCardIds(response.data.cards ?? []) };
+    const offset = (page - 1) * pageSize;
+    const cards = (response.data.cards ?? []).map((card, index) => ({ ...card, id: String(offset + index) }));
+    return { ...response.data, cards };
   } catch (error) {
     throw toApiError(error);
   }

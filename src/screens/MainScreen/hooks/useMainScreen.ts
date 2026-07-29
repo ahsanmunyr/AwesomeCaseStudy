@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { DEFAULT_PAGE_SIZE, getCards } from "../../../services/cards.service";
 import { ApiErrorInfo, toApiErrorInfo } from "../../../services/apiError";
 import { CardWithId } from "../../../../types/heartstone-api/type";
@@ -28,6 +28,7 @@ interface MainScreenReturnTypes {
   onScrollBegin: () => void;
   loadMore: () => void;
   retry: () => void;
+  getCardFunc: (targetPage?: number) => Promise<void>;
 }
 
 export const useMainScreen = (pageSize: number = DEFAULT_PAGE_SIZE): MainScreenReturnTypes => {
@@ -37,7 +38,6 @@ export const useMainScreen = (pageSize: number = DEFAULT_PAGE_SIZE): MainScreenR
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<ApiErrorInfo | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
   const [search, setSearch] = useState("");
   const [type, setType] = useState<string | null>(null);
   const [cardClass, setCardClass] = useState<string | null>(null);
@@ -45,39 +45,30 @@ export const useMainScreen = (pageSize: number = DEFAULT_PAGE_SIZE): MainScreenR
 
   const hasScrolled = useRef(false);
 
-  useEffect(() => {
-    let isActive = true;
+  const pageRef = useRef(1);
 
-    async function loadPage() {
+  const getCardFunc = useCallback(
+    async (targetPage: number = 1) => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const response = await getCards(page, pageSize);
-        if (!isActive) {
-          return;
-        }
+        const response = await getCards(targetPage, pageSize);
 
-        setCards(current => [...current, ...response.cards]);
+        setCards(current => (targetPage === 1 ? response.cards : [...current, ...response.cards]));
         setTotalPages(response.pageCount);
         setTotalCount(response.cardCount);
+
+        pageRef.current = targetPage;
+        setPage(targetPage);
       } catch (requestError) {
-        if (isActive) {
-          setError(toApiErrorInfo(requestError));
-        }
+        setError(toApiErrorInfo(requestError));
       } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
-    }
-
-    loadPage();
-
-    return () => {
-      isActive = false;
-    };
-  }, [page, pageSize, retryCount]);
+    },
+    [pageSize],
+  );
 
   const debouncedSearch = useDebounce(search);
   const options = useMemo(() => deriveFilterOptions(cards), [cards]);
@@ -96,15 +87,16 @@ export const useMainScreen = (pageSize: number = DEFAULT_PAGE_SIZE): MainScreenR
     if (isLoading || !hasMore) {
       return;
     }
-    setPage(current => current + 1);
-  }, [isLoading, hasMore]);
+    const nextPage = pageRef.current + 1;
+    getCardFunc(nextPage);
+  }, [isLoading, hasMore, getCardFunc]);
 
   const retry = useCallback(() => {
     if (isLoading) {
       return;
     }
-    setRetryCount(current => current + 1);
-  }, [isLoading]);
+    getCardFunc(pageRef.current);
+  }, [isLoading, getCardFunc]);
 
   const clearFilters = useCallback(() => {
     setSearch(EMPTY_FILTERS.search);
@@ -147,5 +139,6 @@ export const useMainScreen = (pageSize: number = DEFAULT_PAGE_SIZE): MainScreenR
     onScrollBegin,
     loadMore,
     retry,
+    getCardFunc,
   };
 };

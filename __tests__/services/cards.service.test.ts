@@ -19,7 +19,6 @@ jest.mock("axios", () => {
 import axios from "axios";
 import { DEFAULT_PAGE_SIZE, getCards } from "../../src/services/cards.service";
 import { ApiError } from "../../src/services/apiError";
-import { cardIdentity } from "../../src/services/cardIdentity";
 
 /** A card exactly as the API sends it: no id yet. */
 const RAW_SPELL = makeCard({ slug: "fireball", name: "Fireball" });
@@ -106,7 +105,7 @@ describe("getCards", () => {
     const page = await getCards(1);
 
     expect(RAW_SPELL).not.toHaveProperty("id");
-    expect(page.cards[0].id).toBe(cardIdentity(RAW_SPELL));
+    expect(page.cards[0].id).toBe("0");
     expect(page.cards[0].name).toBe("Fireball");
   });
 

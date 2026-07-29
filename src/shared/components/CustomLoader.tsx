@@ -5,10 +5,8 @@ import CustomText from "./CustomText";
 import CustomView from "./CustomView";
 
 export interface CustomLoaderProps extends Omit<ActivityIndicatorProps, "color"> {
-  /** Optional text shown under the spinner. Already translated by the caller. */
   caption?: string;
   color?: string;
-  /** Fills the whole space and centres itself. Used for the first load. */
   fullscreen?: boolean;
 }
 

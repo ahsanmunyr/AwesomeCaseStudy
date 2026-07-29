@@ -92,8 +92,7 @@ src/
 │  ├─ api.ts               createApiClient() — axios + RapidAPI headers
 │  └─ baseURLs.ts          endpoint constants
 ├─ services/
-│  ├─ cards.service.ts     getCards(page, pageSize) — uses createApiClient
-│  ├─ cardIdentity.ts      builds the `id` the API does not send (see below)
+│  ├─ cards.service.ts     getCards(page, pageSize) — also adds the `id` the API omits
 │  └─ apiError.ts          ApiError carrying a translation key, not a message
 ├─ hooks/
 │  └─ useDebounce.ts       generic, reusable across screens
@@ -134,17 +133,17 @@ Consequence: all searching and filtering is client-side, over the cards loaded s
 
 ### `slug` is not unique
 
-The dataset holds **4305 cards across only 3694 slugs**. Reprints repeat a slug across sets, sometimes with different stats — Abusive Sergeant ships as both a 1/1 and a 2/1. Keying on `slug` drops ~611 real cards and produces duplicate React keys.
+The dataset holds **4305 cards across only 3694 slugs**. Reprints repeat a slug across sets, sometimes with different stats — Abusive Sergeant ships as both a 1/1 and a 2/1. So `slug` cannot be the React key: it would produce duplicate keys for ~611 real cards.
 
-There is no `id` field, so the service builds one for every card as it arrives (`src/services/cardIdentity.ts`):
+There is no `id` field either, so `getCards` gives each card its position in the loaded list:
 
 ```
-slug | cardSet.slug | copyOfCardId | manaCost | attack | health
+id = (page - 1) * pageSize + indexInPage
 ```
 
-Verified across the full dataset: 4305 unique ids, zero collisions.
+The id is only ever a list key, and the list is append-only — page 2 lands under page 1 and nothing is reordered or removed — so a card's position never changes once it is loaded. Pagination was checked against the live API and is stable: page 1 returns identical cards when refetched, consecutive and distant pages never overlap, and 358 × 12 + 9 = 4305 exactly. So no de-duplication step is needed on merge, and no content-derived identity is needed either.
 
-`getCards` attaches that id before returning, so every card outside the service is a `CardWithId` and the rest of the app just uses `card.id` — the list's `keyExtractor` is a one-liner, and a new page is appended with a plain spread. Pagination was checked against the live API and is stable: page 1 returns identical cards when refetched, consecutive and distant pages never overlap, and 358 × 12 + 9 = 4305 exactly. So no de-duplication step is needed on merge.
+Every card outside the service is a `CardWithId`, which keeps the list's `keyExtractor` a one-liner and lets a new page be appended with a plain spread.
 
 ### No card images
 
@@ -241,7 +240,7 @@ npm test
 
 What is covered:
 
-- **Pure logic** — filtering, option derivation, card identity (including reprint collisions)
+- **Pure logic** — filtering and option derivation
 - **Hooks** — pagination, retry, stale-response handling, scroll gating, filter interaction, debounce
 - **Service** — request shape, and every error mapped to the right translation key
 - **Components** — all five shared primitives, in both languages, plus RTL alignment

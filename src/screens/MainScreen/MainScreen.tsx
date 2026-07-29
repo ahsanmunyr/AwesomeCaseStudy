@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FlashList } from "@shopify/flash-list";
 import { SafeAreaView } from "react-native-safe-area-context";
 import createStyles from "./MainScreen.style";
@@ -6,6 +6,7 @@ import { useMainScreen } from "./hooks/useMainScreen";
 import CardItem from "../../components/CardItem";
 import FilterBar from "../../components/FilterBar";
 import { EmptyState, ErrorState, ListFooter, LoadingState } from "../../components/ListStates";
+import CardDetailSheet from "../../components/CardDetailSheet";
 import { CardWithId } from "../../../types/heartstone-api/type";
 import { CustomPressable, CustomText, CustomView } from "../../shared/components";
 import { useTranslation } from "../../shared/i18n";
@@ -13,6 +14,8 @@ import { useTranslation } from "../../shared/i18n";
 const MainScreen = () => {
   const styles = useMemo(() => createStyles(), []);
   const { t, i18n } = useTranslation();
+  const [cardData, onChangeCardData] = useState<CardWithId | null>(null);
+  const closeCardDetail = useCallback(() => onChangeCardData(null), []);
   const toggleLanguage = useCallback(() => {
     i18n.changeLanguage(i18n.language === "ar" ? "en" : "ar");
   }, [i18n]);
@@ -40,11 +43,17 @@ const MainScreen = () => {
     onScrollBegin,
     loadMore,
     retry,
+    getCardFunc,
   } = useMainScreen();
 
-  const renderItem = useCallback(({ item }: { item: CardWithId }) => <CardItem card={item} />, []);
+  useEffect(() => {
+    getCardFunc(1);
+  }, [getCardFunc]);
 
-  const keyExtractor = useCallback((item: CardWithId) => item.id, []);
+  const renderItem = useCallback(
+    ({ item }: { item: CardWithId }) => <CardItem card={item} onSetData={onChangeCardData} />,
+    [onChangeCardData],
+  );
 
   const listFooter = useMemo(() => {
     if (error) {
@@ -76,6 +85,7 @@ const MainScreen = () => {
     if (isInitialLoading) {
       return <LoadingState />;
     }
+
     if (error && loadedCount === 0) {
       return <ErrorState error={error} onRetry={retry} />;
     }
@@ -85,7 +95,7 @@ const MainScreen = () => {
         testID="cards-list"
         data={cards}
         renderItem={renderItem}
-        keyExtractor={keyExtractor}
+        keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
         onEndReached={onEndReached}
         onEndReachedThreshold={0.5}
@@ -112,6 +122,7 @@ const MainScreen = () => {
         <CustomPressable
           testID="language-toggle"
           variant="pill"
+          disabled={true}
           label={t("app.otherLanguage")}
           accessibilityLabel={t("app.changeLanguage")}
           onPress={toggleLanguage}
@@ -133,6 +144,7 @@ const MainScreen = () => {
       />
 
       {renderBody()}
+      {cardData && <CardDetailSheet card={cardData} cards={cards} onClose={closeCardDetail} onSelectCard={onChangeCardData} />}
     </SafeAreaView>
   );
 };

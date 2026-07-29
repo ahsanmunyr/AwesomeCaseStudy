@@ -4,12 +4,6 @@ import { ApiErrorInfo } from "../services/apiError";
 import { CustomLoader, CustomPressable, CustomText, CustomView } from "../shared/components";
 import { useTranslation } from "../shared/i18n";
 
-/**
- * The four things the list can show apart from cards: the first loading
- * spinner, an error, an empty result, and the footer under the last card.
- */
-
-/** Shown while the very first page is loading and the screen is still empty. */
 export const LoadingState = memo(() => {
   const { t } = useTranslation();
   return <CustomLoader testID="loading-state" fullscreen size="large" caption={t("list.loading")} />;
@@ -71,7 +65,6 @@ interface FooterProps {
   isFiltering: boolean;
 }
 
-/** Sits under the last card: a spinner, a "Load more" button, or a done message. */
 export const ListFooter = memo(({ isLoadingMore, hasMore, onLoadMore, loadedCount, totalCount, isFiltering }: FooterProps) => {
   const { t } = useTranslation();
 
