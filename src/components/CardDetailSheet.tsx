@@ -269,6 +269,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: colors.text,
     fontSize: 14,
+    width: 110,
   },
 });
 
