@@ -1,7 +1,7 @@
 import React, { memo, useMemo } from "react";
 import { Modal, StyleSheet, Image, ScrollView, TouchableOpacity } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { Card } from "../../types/heartstone-api/type";
+import { CardWithId } from "../../types/heartstone-api/type";
 import colors, { rarityColors } from "../theme/colors";
 import { CustomText, CustomView } from "../shared/components";
 import { useTranslation } from "../shared/i18n";
@@ -9,10 +9,10 @@ import { cleanCardText, getClassIconUrl } from "../screens/MainScreen/utils/card
 import { getCardImage } from "../assets/cardImages";
 
 interface Props {
-  card: Card | null;
-  cards: Card[];
+  card: CardWithId | null;
+  cards: CardWithId[];
   onClose: () => void;
-  onSelectCard: (card: Card) => void;
+  onSelectCard: (card: CardWithId) => void;
 }
 
 const RELATED_LIMIT = 20;

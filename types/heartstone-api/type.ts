@@ -38,7 +38,6 @@ export interface Card {
   duels?: Duels;
   copyOfCardId?: number;
   minionTypeId?: number;
-  id: string;
 }
 
 export interface Duels {
