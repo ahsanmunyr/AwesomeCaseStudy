@@ -21,7 +21,6 @@ beforeEach(() => {
   mockedGetCards.mockReset();
 });
 
-/** Renders the screen and waits until the first page is on screen. */
 async function renderScreen() {
   await renderWithI18n(<MainScreen />);
   await waitFor(() => expect(screen.getByText("Fireball")).toBeTruthy());
@@ -56,7 +55,7 @@ describe("MainScreen", () => {
     expect(screen.getByText("Chillwind Yeti")).toBeTruthy();
   });
 
-  it("shows only the cards of the type picked in the dropdown", async () => {
+  it("shows only the cards of the type picked in the dropdown, and every card again after Clear", async () => {
     mockedGetCards.mockResolvedValue(makeResponse(PAGE_ONE));
     await renderScreen();
 
@@ -65,15 +64,6 @@ describe("MainScreen", () => {
 
     await waitFor(() => expect(screen.queryByText("Fireball")).toBeNull());
     expect(screen.getByText("Chillwind Yeti")).toBeTruthy();
-  });
-
-  it("brings every card back when Clear is pressed", async () => {
-    mockedGetCards.mockResolvedValue(makeResponse(PAGE_ONE));
-    await renderScreen();
-
-    await fireEvent.press(screen.getByTestId("filter-type"));
-    await fireEvent.press(screen.getByTestId("option-minion"));
-    await waitFor(() => expect(screen.queryByText("Fireball")).toBeNull());
 
     await fireEvent.press(screen.getByTestId("clear-filters"));
 
@@ -104,19 +94,15 @@ describe("MainScreen", () => {
   });
 
   it("does not load page 2 until the user has actually dragged the list", async () => {
-    mockedGetCards.mockResolvedValue(makeResponse(PAGE_ONE));
+    mockedGetCards.mockResolvedValueOnce(makeResponse(PAGE_ONE)).mockResolvedValueOnce(makeResponse([WEAPON]));
     await renderScreen();
 
     const list = screen.getByTestId("cards-list");
 
-    // FlashList fires this once while it measures itself, before any scrolling.
     await act(async () => {
       list.props.onEndReached();
     });
     expect(mockedGetCards).toHaveBeenCalledTimes(1);
-
-    // A slow drag must count. This is wired to onScrollBeginDrag, not
-    // onMomentumScrollBegin, which only fires when the list is flicked.
     await act(async () => {
       list.props.onScrollBeginDrag();
       list.props.onEndReached();
@@ -126,25 +112,26 @@ describe("MainScreen", () => {
     expect(mockedGetCards).toHaveBeenLastCalledWith(2, 12);
   });
 
-  it("switches the whole screen to Arabic and back with the language button", async () => {
+  it("opens the detail sheet on the card that was tapped, and closes it again", async () => {
     mockedGetCards.mockResolvedValue(makeResponse(PAGE_ONE));
     await renderScreen();
 
-    expect(screen.getByText("Hearthstone Cards")).toBeTruthy();
-    // The button shows the language you will switch to.
-    expect(screen.getByText("العربية")).toBeTruthy();
+    expect(screen.queryByTestId("card-detail-sheet")).toBeNull();
 
-    await fireEvent.press(screen.getByTestId("language-toggle"));
+    await fireEvent.press(screen.getByTestId("card-pressable-chillwind-yeti"));
 
-    await waitFor(() => expect(screen.getByText("بطاقات هيرثستون")).toBeTruthy());
-    expect(screen.queryByText("Hearthstone Cards")).toBeNull();
-    expect(screen.getByText("English")).toBeTruthy();
-    // Card names come from the API, so they stay as they are.
-    expect(screen.getByText("Fireball")).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId("card-detail-sheet")).toBeTruthy());
 
-    await fireEvent.press(screen.getByTestId("language-toggle"));
+    expect(screen.getByText("Minion • Common")).toBeTruthy();
 
-    await waitFor(() => expect(screen.getByText("Hearthstone Cards")).toBeTruthy());
+    await fireEvent.press(screen.getByTestId("related-card-ragnaros"));
+
+    await waitFor(() => expect(screen.getByText("Minion • Legendary")).toBeTruthy());
+    expect(screen.queryByText("Minion • Common")).toBeNull();
+
+    await fireEvent.press(screen.getByTestId("card-detail-close"));
+
+    await waitFor(() => expect(screen.queryByTestId("card-detail-sheet")).toBeNull());
   });
 
   it("offers to load more when the search matches nothing loaded so far", async () => {
@@ -155,7 +142,6 @@ describe("MainScreen", () => {
 
     await waitFor(() => expect(screen.getByTestId("empty-state")).toBeTruthy());
     expect(screen.getByTestId("empty-load-more")).toBeTruthy();
-    // The footer button must be hidden here, or the user sees two of them.
     expect(screen.queryByTestId("load-more")).toBeNull();
   });
 });

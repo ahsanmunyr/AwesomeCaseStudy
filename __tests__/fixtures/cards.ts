@@ -1,6 +1,5 @@
 import { Card, CardSet, CardWithId, CardsPage, HearthstoneResponse } from "../../types/heartstone-api/type";
 
-/** The parts of a card a test may want to change. */
 interface CardOverrides {
   slug?: string;
   name?: string;
@@ -29,10 +28,6 @@ function makeCardSet(slug?: string): CardSet | null {
   };
 }
 
-/**
- * A card exactly as the API sends it, with no id. Only the service test needs
- * this shape; everywhere else the service has already added the id.
- */
 export function makeCard(overrides: CardOverrides = {}): Card {
   const type = overrides.type ?? { slug: "spell", name: "Spell" };
   const cardClass = overrides.cardClass ?? { slug: "mage", name: "Mage" };
@@ -61,10 +56,6 @@ export function makeCard(overrides: CardOverrides = {}): Card {
   };
 }
 
-/**
- * The same card after the service has given it an id. The id is the card's
- * position in the loaded list, so fixtures used together need different ones.
- */
 export function makeCardWithId(overrides: CardOverrides = {}, id: string = "0"): CardWithId {
   return { ...makeCard(overrides), id };
 }

@@ -2,7 +2,7 @@
 
 A React Native card browser built on the RapidAPI Hearthstone **All Cards** service. Cards are paginated 12 at a time into a FlashList, with a header that carries a search bar and Type / Class / Rarity dropdowns.
 
-Written in TypeScript throughout, fully unit tested, and localised for English and Arabic.
+Written in TypeScript throughout, unit tested, and localised for English and Arabic.
 
 |              |                                           |
 | ------------ | ----------------------------------------- |
@@ -71,14 +71,14 @@ npm run android
 
 ## Requirements coverage
 
-| Requirement                            | Where                                                             |
-| -------------------------------------- | ----------------------------------------------------------------- |
-| **1a** — API service = All Cards       | `src/services/cards.service.ts`                                   |
-| **1b** — Search for specific cards     | Search bar in the header, debounced 300 ms                        |
-| **1c** — View cards by selected type   | Type dropdown filters the list in place                           |
-| **2** — Display cards by selected type | Same screen; the list narrows to the chosen type                  |
-| TypeScript mandatory                   | `strict: true`, zero `tsc` errors                                 |
-| Unit testing mandatory                 | 94 tests across services, hooks, utils, components and the screen |
+| Requirement                            | Where                                                                                      |
+| -------------------------------------- | ------------------------------------------------------------------------------------------ |
+| **1a** — API service = All Cards       | `src/services/cards.service.ts`                                                            |
+| **1b** — Search for specific cards     | Search bar in the header, debounced 300 ms                                                 |
+| **1c** — View cards by selected type   | Type dropdown filters the list in place                                                    |
+| **2** — Display cards by selected type | Same screen; the list narrows to the chosen type                                           |
+| TypeScript mandatory                   | `strict: true`, zero `tsc` errors                                                          |
+| Unit testing mandatory                 | 22 tests across the API service, the filters, the locales, the screen and the detail sheet |
 
 **Note on screens.** The brief describes two screens (a type list, then a drill-down). This implementation is a single screen with header filters, chosen deliberately for a simpler flow: selecting a type in the dropdown narrows the list to that type, which satisfies 1a/1b/1c and requirement 2 functionally. A reviewer looking specifically for a navigation transition between two screens will not find one.
 
@@ -117,7 +117,7 @@ The data flow is a single chain:
 createApiClient    →  cards.service  →  MainScreen/hooks  →  MainScreen
 ```
 
-`MainScreen` consumes exactly one hook (`useMainScreen`) and holds no data logic. All pure logic — filtering, option derivation, card identity — lives in `utils/` so it is testable without React.
+`MainScreen` consumes exactly one hook (`useMainScreen`) and holds no data logic. All pure logic — filtering and option derivation — lives in `utils/` so it is testable without React.
 
 ---
 
@@ -229,25 +229,69 @@ Feature code uses no raw React Native primitives — no `<Text>`, `<View>`, `<Pr
 npm test
 ```
 
-**151 tests** across 14 files.
+**22 tests across 5 files**, kept deliberately small: one test per behaviour that would actually break the app, driven through the screen rather than through internals. Test names read as sentences, so the suite doubles as a spec.
 
 | Area       | Coverage |
 | ---------- | -------- |
-| Statements | 96.1%    |
-| Branches   | 91.8%    |
-| Functions  | 96.7%    |
-| Lines      | 96.2%    |
+| Statements | 94.6%    |
+| Branches   | 80.5%    |
+| Functions  | 95.2%    |
+| Lines      | 95.3%    |
 
-What is covered:
+### `__tests__/services/cards.service.test.ts` — the API layer (4)
 
-- **Pure logic** — filtering and option derivation
-- **Hooks** — pagination, retry, stale-response handling, scroll gating, filter interaction, debounce
-- **Service** — request shape, and every error mapped to the right translation key
-- **Components** — all five shared primitives, in both languages, plus RTL alignment
-- **Screen** — search, type filtering, load-more, error/retry, empty state
-- **Locale parity** — Arabic defines every English key, adds none, and every `{{placeholder}}` matches across both files, so a half-finished translation fails at test time
+| Test                | Guards                                                                           |
+| ------------------- | -------------------------------------------------------------------------------- |
+| Request shape       | `/cards?page=N&pageSize=12`, the RapidAPI base URL and the key header            |
+| Positional ids      | Page 2 yields ids `12`, `13` — unique as pages pile up, since the API sends none |
+| HTTP status mapping | 429 → rate limit, 401 → invalid key, 500 → generic with the status kept          |
+| Network failure     | A request that never arrives → the network message                               |
 
-Component tests render against the real i18next instance (`__tests__/fixtures/renderWithI18n.tsx` only picks the language), so they assert on the strings a user actually sees rather than against a stubbed translator.
+### `__tests__/utils/cardFilters.test.ts` — the pure filter pass (2)
+
+| Test             | Guards                                                                                                                                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Combined filters | Type, class, rarity and the name search all hold at once; search is case- and whitespace-insensitive; an unmatched combination returns empty rather than everything; with nothing active the same array comes back |
+| `cleanCardText`  | The `<b>` tags and literal `\n` the API sends are stripped and the leftover whitespace collapsed                                                                                                                   |
+
+### `__tests__/shared/i18n.test.ts` — locale parity (1)
+
+| Test          | Guards                                                                                                                                                                              |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| en ↔ ar match | Arabic defines every English key and adds none, and every `{{placeholder}}` survives translation — so a half-finished translation fails at test time rather than in front of a user |
+
+### `__tests__/screens/MainScreen.test.tsx` — the user flows (9)
+
+| Test                | Guards                                                                                       |
+| ------------------- | -------------------------------------------------------------------------------------------- |
+| First load          | Spinner while page 1 is in flight, then the cards render and `getCards(1, 12)` was called    |
+| Search              | Typing narrows the list once the 300 ms debounce settles                                     |
+| Type filter + Clear | Picking Minion hides spells; Clear brings every card back                                    |
+| Load more           | The footer button fetches page 2 and appends it                                              |
+| Error and retry     | The error message shows with a Try again button, and the screen recovers on success          |
+| Scroll gate         | `onEndReached` during first layout must not fetch page 2 — only a real drag opens the gate   |
+| Empty state         | A search matching nothing offers one Load more, never two                                    |
+| Detail sheet        | Tapping a card opens the sheet on that card, a related card swaps it, and close dismisses it |
+
+### `__tests__/components/CardDetailSheet.test.tsx` — the sheet (6)
+
+| Test           | Guards                                                                        |
+| -------------- | ----------------------------------------------------------------------------- |
+| Full card      | Name, type • rarity, mana/attack/health and card text under translated labels |
+| Spell          | No attack or health badges for a card that has neither                        |
+| Set row        | The set line appears only when the API sends one                              |
+| Close          | The close button calls back to the screen                                     |
+| Related strip  | Same type only, never the open card, and tapping one selects it               |
+| Nothing loaded | The "no other X cards loaded yet" line when the strip would be empty          |
+
+Two details worth knowing before reading the tests:
+
+- **`FlashList` is stubbed in `jest.setup.js`.** The real one virtualises off-screen rows, which hides them from queries; the stub renders every row and exposes `onEndReached` / `onScrollBeginDrag` on the view so the scroll-gate test can fire them directly.
+- **Fixture ids are positional** (`MINION` is `"0"`, `SPELL` is `"1"`, …) because the service derives ids from list position. Fixtures used together need different ids, and a mocked page 2 must return different cards than page 1.
+
+Tests render against the real i18next instance (`__tests__/fixtures/renderWithI18n.tsx` only picks the language), so they assert on the strings a user actually sees rather than against a stubbed translator.
+
+Not covered, deliberately: `useDebounce` and the shared primitives in isolation. Both are exercised through the screen — the search test only passes once the 300 ms debounce settles, and every button and label on screen is a shared primitive.
 
 ---
 
@@ -257,4 +301,3 @@ Component tests render against the real i18next instance (`__tests__/fixtures/re
 - `useCallback` for `renderItem`, `keyExtractor` and all handlers
 - `useMemo` for derived filter options, the filtered list, and list header/footer elements
 - Search debounced 300 ms so typing does not re-run the filter pass per keystroke
-- Referential stability of hook callbacks is asserted by test

@@ -21,62 +21,71 @@ const CardDetailSheet = ({ card, cards, onClose, onSelectCard }: Props) => {
   const { t } = useTranslation();
 
   const relatedCards = useMemo(() => {
-    if (!card) return [];
+    if (!card) {
+      return [];
+    }
     return cards.filter(other => other.id !== card.id && other.type?.slug === card.type?.slug).slice(0, RELATED_LIMIT);
   }, [card, cards]);
 
-  if (!card) return null;
+  if (!card) {
+    return null;
+  }
 
-  const rarityColor = rarityColors[card?.rarity?.slug ?? ""] ?? colors.textMuted;
-  const typeName = card?.type?.name ?? "Unknown Type";
-  const cardText = cleanCardText(card?.text);
-  const flavorText = cleanCardText(card?.flavorText);
+  const rarityColor = rarityColors[card.rarity?.slug] ?? colors.textMuted;
+  const typeName = card.type?.name || t("card.unknownType");
+  const cardText = cleanCardText(card.text);
+  const flavorText = cleanCardText(card.flavorText);
 
-  const classIconUri = getClassIconUrl(card?.class?.name);
+  const classIconUri = getClassIconUrl(card.class?.name);
 
   return (
-    <Modal visible={!!card} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <CustomView style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-        <CustomView style={styles.sheetContainer}>
+        <TouchableOpacity style={styles.backdrop} activeOpacity={1} accessibilityLabel={t("detail.close")} onPress={onClose} />
+        <CustomView testID="card-detail-sheet" style={styles.sheetContainer}>
           <CustomView row style={styles.header}>
             <CustomView style={styles.headerTitleContainer}>
               <CustomText variant="title" numberOfLines={1}>
-                {card?.name ?? ""}
+                {card.name}
               </CustomText>
               <CustomText variant="caption" color={rarityColor}>
-                {typeName} • {card?.rarity?.name ?? t("card.noRarity")}
+                {typeName} • {card.rarity?.name || t("card.noRarity")}
               </CustomText>
             </CustomView>
 
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+            <TouchableOpacity
+              testID="card-detail-close"
+              accessibilityRole="button"
+              accessibilityLabel={t("detail.close")}
+              style={styles.closeBtn}
+              onPress={onClose}>
               <CustomText style={styles.closeBtnText}>✕</CustomText>
             </TouchableOpacity>
           </CustomView>
 
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             <CustomView row style={styles.mainRow}>
-              {!!card?.slug && <Image source={getCardImage(card.slug)} style={styles.cardThumbnail} resizeMode="contain" />}
+              {!!card.slug && <Image source={getCardImage(card.slug)} style={styles.cardThumbnail} resizeMode="contain" />}
               <CustomView style={styles.detailsRight}>
                 <CustomView row style={styles.statsContainer}>
-                  <StatBadge label="Mana" value={card?.manaCost ?? 0} color="#0284c7" />
-                  {card?.attack !== undefined && <StatBadge label="ATK" value={card.attack} color="#d97706" />}
-                  {card?.health !== undefined && <StatBadge label="HP" value={card.health} color="#dc2626" />}
+                  <StatBadge label={t("detail.mana")} value={card.manaCost ?? 0} color={statColors.mana} />
+                  {card.attack !== undefined && <StatBadge label={t("detail.attack")} value={card.attack} color={statColors.attack} />}
+                  {card.health !== undefined && <StatBadge label={t("detail.health")} value={card.health} color={statColors.health} />}
                 </CustomView>
 
                 <CustomView row style={styles.classInfo}>
                   {!!classIconUri && <Image source={{ uri: classIconUri }} style={styles.classIcon} />}
-                  <CustomText variant="bodyStrong">{card?.class?.name ?? t("card.neutralClass")}</CustomText>
+                  <CustomText variant="bodyStrong">{card.class?.name || t("card.neutralClass")}</CustomText>
                 </CustomView>
 
-                {!!card?.cardSet?.name && (
+                {!!card.cardSet?.name && (
                   <CustomText variant="caption" color={colors.textMuted}>
-                    Set: {card.cardSet.name}
+                    {t("detail.set")}: {card.cardSet.name}
                   </CustomText>
                 )}
-                {!!card?.artistName && (
+                {!!card.artistName && (
                   <CustomText variant="caption" color={colors.textMuted}>
-                    Artist: {card.artistName}
+                    {t("detail.artist")}: {card.artistName}
                   </CustomText>
                 )}
               </CustomView>
@@ -85,7 +94,7 @@ const CardDetailSheet = ({ card, cards, onClose, onSelectCard }: Props) => {
             {!!cardText && (
               <CustomView style={styles.sectionBlock}>
                 <CustomText variant="label" style={styles.sectionTitle}>
-                  Effect
+                  {t("detail.text")}
                 </CustomText>
                 <CustomText style={styles.bodyText}>{cardText}</CustomText>
               </CustomView>
@@ -94,7 +103,7 @@ const CardDetailSheet = ({ card, cards, onClose, onSelectCard }: Props) => {
             {!!flavorText && (
               <CustomView style={styles.sectionBlock}>
                 <CustomText variant="label" style={styles.sectionTitle}>
-                  Flavor Text
+                  {t("detail.flavor")}
                 </CustomText>
                 <CustomText style={[styles.bodyText, styles.italicText]}>{flavorText}</CustomText>
               </CustomView>
@@ -103,25 +112,30 @@ const CardDetailSheet = ({ card, cards, onClose, onSelectCard }: Props) => {
 
           <CustomView style={styles.relatedSection}>
             <CustomText variant="label" style={styles.relatedTitle}>
-              More {typeName} Cards
+              {t("detail.related", { type: typeName })}
             </CustomText>
 
             {relatedCards.length === 0 ? (
               <CustomText variant="caption" style={styles.bodyText}>
-                No cards available.
+                {t("detail.noRelated", { type: typeName })}
               </CustomText>
             ) : (
               <FlashList
                 horizontal
+                testID="related-cards-list"
                 data={relatedCards}
-                keyExtractor={item => String(item.id)}
+                keyExtractor={item => item.id}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.flashListContent}
                 renderItem={({ item }) => (
-                  <TouchableOpacity style={styles.relatedCardItem} onPress={() => onSelectCard(item)}>
-                    {!!item?.slug && <Image source={getCardImage(item.slug)} style={styles.relatedImage} resizeMode="contain" />}
+                  <TouchableOpacity
+                    testID={`related-card-${item.slug}`}
+                    accessibilityRole="button"
+                    style={styles.relatedCardItem}
+                    onPress={() => onSelectCard(item)}>
+                    {!!item.slug && <Image source={getCardImage(item.slug)} style={styles.relatedImage} resizeMode="contain" />}
                     <CustomText variant="caption" numberOfLines={2} style={styles.relatedText}>
-                      {item?.name ?? ""}
+                      {item.name}
                     </CustomText>
                   </TouchableOpacity>
                 )}
@@ -142,6 +156,13 @@ const StatBadge = ({ label, value, color }: { label: string; value: number; colo
     </CustomText>
   </CustomView>
 );
+
+/** Mana / attack / health keep their own colours, like the card art does. */
+const statColors = {
+  mana: "#0284c7",
+  attack: "#d97706",
+  health: "#dc2626",
+} as const;
 
 const styles = StyleSheet.create({
   overlay: {
