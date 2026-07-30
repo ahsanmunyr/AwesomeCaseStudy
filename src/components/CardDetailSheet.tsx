@@ -1,7 +1,7 @@
 import React, { memo, useMemo } from "react";
 import { Modal, StyleSheet, Image, ScrollView, TouchableOpacity } from "react-native";
 import { FlashList } from "@shopify/flash-list";
-import { CardWithId } from "../../types/heartstone-api/type";
+import { Card } from "../../types/heartstone-api/type";
 import colors, { rarityColors } from "../theme/colors";
 import { CustomText, CustomView } from "../shared/components";
 import { useTranslation } from "../shared/i18n";
@@ -9,10 +9,10 @@ import { cleanCardText, getClassIconUrl } from "../screens/MainScreen/utils/card
 import { getCardImage } from "../assets/cardImages";
 
 interface Props {
-  card: CardWithId | null;
-  cards: CardWithId[];
+  card: Card | null;
+  cards: Card[];
   onClose: () => void;
-  onSelectCard: (card: CardWithId) => void;
+  onSelectCard: (card: Card) => void;
 }
 
 const RELATED_LIMIT = 20;
@@ -24,12 +24,58 @@ const CardDetailSheet = ({ card, cards, onClose, onSelectCard }: Props) => {
     if (!card) {
       return [];
     }
-    return cards.filter(other => other.id !== card.id && other.type?.slug === card.type?.slug).slice(0, RELATED_LIMIT);
+    return cards.filter(other => other?.id !== card?.id && other.type?.slug === card.type?.slug).slice(0, RELATED_LIMIT);
   }, [card, cards]);
 
   if (!card) {
     return null;
   }
+
+  console.log(card, "card");
+
+  //   const dummyCard: Card = {
+  //     collectible: 1,
+  //     slug: "adorable-infestation",
+  //     artistName: "Ivan Fomin",
+  //     manaCost: 1,
+  //     name: "Adorable Infestation",
+  //     text: "Give a minion +1/+1. Summon a 1/1 Cub. Add a Cub to your hand.",
+  //     flavorText: "Some cards are strong by sheer power; others draw strength from love.",
+  //     duels: {
+  //       relevant: true,
+  //       constructed: true,
+  //     },
+  //     hasImage: true,
+  //     hasImageGold: false,
+  //     hasCropImage: true,
+  //     keywords: [],
+  //     rarity: {
+  //       slug: "common",
+  //       craftingCost: [40, 400],
+  //       dustValue: [5, 50],
+  //       name: "Common",
+  //     },
+  //     class: {
+  //       slug: "hunter",
+  //       name: "Hunter",
+  //     },
+  //     type: {
+  //       slug: "spell",
+  //       name: "Spell",
+  //       gameModes: [],
+  //     },
+  //     cardSet: {
+  //       name: "Scholomance Academy",
+  //       slug: "scholomance-academy",
+  //       type: "expansion",
+  //       collectibleCount: 135,
+  //       collectibleRevealedCount: 135,
+  //       nonCollectibleCount: 194,
+  //       nonCollectibleRevealedCount: 56,
+  //     },
+  //     spellSchool: null,
+  //     id: "31",
+  //   };
 
   const rarityColor = rarityColors[card.rarity?.slug] ?? colors.textMuted;
   const typeName = card.type?.name || t("card.unknownType");
@@ -157,7 +203,6 @@ const StatBadge = ({ label, value, color }: { label: string; value: number; colo
   </CustomView>
 );
 
-/** Mana / attack / health keep their own colours, like the card art does. */
 const statColors = {
   mana: "#0284c7",
   attack: "#d97706",
